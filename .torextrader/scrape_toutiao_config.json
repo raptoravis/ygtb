@@ -1,0 +1,187 @@
+{
+	"items": [
+		{
+			"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAA1UhV6LPB6nWknW5yBJkEMKhojEB8L2aAPxG4QXy0YC8/?&tab=article",
+			"filter": "资治通鉴",
+			"name": "半隐斋主人"
+		},
+		{
+			"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAZhiC9UJdaaM-xbxjlfV1eCYvbx3ndGoIWXQUeiiZrUY/?&tab=article",
+			"filter": "",
+			"include_title": false,
+			"cache": true,
+			// "max": 2000,
+			"name": "西风"
+		},	
+		{
+			"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAALgsUH9WuBZlndUgc1POVqlHfdl-HC_qsNloE0mh5_UA",
+			"filter": "",
+			"cache": true,
+			"is_article": false,
+			"name": "看见在花园种草"
+		},
+		{
+			"link": "https://www.toutiao.com/c/user/token/CigaNF435KKhlYqoGEr82ylnToINqbhACjPj5W3oaKgUY3c93f7loep_GkkKPAAAAAAAAAAAAABPOt014z3eoRpFriIHAfpWltyvS-mdLIRHLC1fIEQ5xjuO2PSO2-a44XWw7uJ-2rUIDxCv0vYNGMPFg-oEIgEDHxjk1w==/?source=m_redirect&tab=article",
+			"filter": "阳明",
+			"cache": true,
+			"is_article": true,
+			"name": "阳明心学"
+		},
+		{
+			"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAM_sfeAVZiqJMFPf_HwasBtdgbXIW4UJvi3944RTps0oBLXTHvqMwtaS9KpuUEz7r/?source=m_redirect&tab=article",
+			"filter": "",
+			"cache": true,
+			"is_article": true,
+			"name": "隐学传人"
+		},
+		{
+			"link": "https://www.toutiao.com/c/user/token/CiwhQ_acc8OeUreTwnc_-ghLClX7kV3wDl5Tz19hhg0Ax1SzKWIBKdb0IXrAeRpJCjwAAAAAAAAAAAAATzdda4mfhOfWNhPs31LZYDvBQTIuGEUS38LT7rvwPdS1Q2MQe8-BVBrjNBRkYqN8omwQjq72DRjDxYPqBCIBA4769z0=/?source=m_redirect&tab=article",
+			"filter": "",
+			"cache": true,
+			"is_article": true,
+			"name": "谋略那些事"
+		},
+		{
+			"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAXp7v7A9VfXh-Pfo1TwejlJViATS7aqxuLnBHjaEb8tx1nDTLe7jF7KsNAR9RoVWk/?tab=article",
+			"filter": "",
+			"cache": true,
+			// "origin": "wp",
+			"reversed": false,
+			"name": "老易说史"
+		},	
+		{
+			"name": "综合_道德经",
+			"subitems": 
+			[
+				// {
+				// 	"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAm3hPyqYHB0yT4LETop_M1TKZa4EiCbIi3YCc1l2J2mE/?source=m_redirect&tab=article",
+				// 	"filter": ["道德经"],
+				// 	"filter_original_text": false,
+				// 	// "origin": "wp",
+				// 	"reversed": false,
+				// 	"name": "地天泰美"
+				// },
+				// {
+				// 	"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAKM8wjWZHn6iuTyouYB5Ldj8_MPuu2W1VmhkCtNUldZg/?source=m_redirect&tab=article",
+				// 	"filter": "道德经",
+				// 	// "origin": "wp",
+				// 	"reversed": false,
+				// 	"filter_original_text": false,
+				// 	"name": "青风冰雪"
+				// },
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAPErw2JpEBcKpi2_BD5ZKfGqA3Ed98k2hEUhtXNMs1Fk/?source=m_redirect&tab=article",
+					"filter": "以对立统一观点解读道德经",
+					// "origin": "wp",
+					"reversed": false,
+					"filter_original_text": true,
+					"name": "螺蛳粉如意鸟"
+				},
+				// {
+				// 	"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAyJKVqMRQrxUMNW29PG8kXsM1BNE2LClpcHkrgfrb6zU/?source=m_redirect&tab=article",
+				// 	// "origin": "wp",
+				// 	"reversed": false,
+				// 	"filter_original_text": true,
+				// 	"filter": "道德经",
+				// 	"name": "谌小平"
+				// },
+				// {
+				// 	"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAMYCxzpCgFGqySPmvwk9zEXY5hQiLt9tyx51fNDRoqws/?source=m_redirect&tab=article",
+				// 	// "origin": "wp",
+				// 	"reversed": false,
+				// 	"filter_original_text": true,
+				// 	"filter": "道德经",
+				// 	"name": "国风玄学"
+				// },
+				// {
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAPe4D_2gwvqRxiZMo2rTvy7pehD3yDe93gpYHU8UBIZI/?source=m_redirect&tab=article",
+					"filter": "道德经",
+					"filter_original_text": false,
+					// "origin": "wp",
+					"reversed": false,
+					"name": "自在清风的小屋"
+				},	
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAmfqbxblSipNJxZiIDpdpC7CBvosIKta8ogdMrncp638/?source=tuwen_detail&entrance_gid=7457911830028042806&log_from=d33a3698a35eb_1736495465509&tab=article",
+					"filter": "道德经",
+					// "origin": "wp",
+					"reversed": false,
+					"filter_original_text": false,
+					"name": "文史阅读札记"
+				},
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAnc2zWu4_Jsfrq3cr14wg5JQntm5Hk9wEue4h8864Q9k/?source=m_redirect&tab=article",
+					"filter": "道德经",
+					// "origin": "wp",
+					"reversed": false,
+					"filter_original_text": false,
+					"name": "肖小怂呀"
+				}
+			]
+		},
+		{
+
+			"name": "综合_庄子",
+			"subitems": 
+			[
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAA_SbjmOWc4OP3reL_ivwTTjS-BbTTuRS8VuRMOZj7oCc/?source=m_redirect&tab=article",
+					"filter": "庄子",
+					// "origin": "wp",
+					"reversed": false,
+					"name": "蝉大侠"
+				},
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAvqPXKdvf_p7sjqfxt2jf9KVO9D7ksbrxDe3R92x8O9Y/?source=m_redirect&tab=article",
+					"filter": "庄子",
+					// "origin": "wp",
+					"reversed": false,
+					"filter_original_text": false,
+					"name": "暖煜"
+				},	
+				{
+					"link": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAmfqbxblSipNJxZiIDpdpC7CBvosIKta8ogdMrncp638/?source=tuwen_detail&tab=article",
+					"filter": "庄子",
+					// "origin": "wp",
+					"reversed": false,
+					"filter_original_text": false,
+					"name": "文史阅读札记"
+				}	
+			]
+		},
+		// {
+		// 	"link": "",
+		// 	"filter": "资治通鉴",
+		// 	"cache": true,
+		// 	"is_article": true,
+		// 	"article_path": "E:\\downloads\\资治通鉴东海镇失业青年",
+		// 	"name": "东海镇失业青年"
+		// },
+		// {
+		// 	"link": "",
+		// 	"filter": "资治通鉴",
+		// 	"cache": true,
+		// 	"is_article": true,
+		// 	"article_path": "E:\\downloads\\资治通鉴六朝私记",
+		// 	"name": "六朝私记"
+		// },
+		{
+			"link": "",
+			"filter": "",
+			"cache": true,
+			"is_article": true,
+			"article_path": "E:\\downloads\\资治通鉴读史悟道",
+			"name": "资治通鉴读史悟道"
+		},
+		{
+			"link": "",
+			"filter": "",
+			"cache": true,
+			"is_article": true,
+			"group_num": 3000,
+			"article_path": "E:\\downloads\\资治通鉴谋略那些事",
+			"name": "资治通鉴谋略那些事"
+		}
+	]
+}
