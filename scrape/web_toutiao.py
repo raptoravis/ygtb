@@ -13,6 +13,7 @@ import commentjson
 import orjson
 from pathlib import Path
 from termcolor import colored
+
 # from selenium import webdriver
 
 
@@ -26,8 +27,30 @@ from selenium.webdriver.edge.webdriver import WebDriver as EdgeWebDriver
 
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
 # from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+
+from selenium import webdriver
+
+# # from webdriver_manager.chrome import ChromeDriverManager
+
+# # # _driver = webdriver.Chrome(ChromeDriverManager().install())
+# # ChromeDriverManager().install()
+# _driver = webdriver.Chrome()
+# # _driver.get("https://www.google.com")
+# # print(_driver.capabilities)  # 正常访问属性
+# _driver.quit()
+
+# # from webdriver_manager.microsoft import EdgeChromiumDriverManager
+
+# # # _driver = webdriver.Chrome(ChromeDriverManager().install())
+# # EdgeChromiumDriverManager().install()
+# _driver = webdriver.Edge()
+# # _driver.get("https://www.google.com")
+# # print(_driver.capabilities)  # 正常访问属性
+# _driver.quit()
+
 
 group_num: int = 2000
 
@@ -85,16 +108,17 @@ def create_drive(use_edge_web_driver: bool):
 
     # https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/?form=MA13LH#downloads
 
-    # driver = webdriver.Chrome(options=options)
     if use_edge_web_driver:
-        driver_name = "msedgedriver.exe"
-        service = EdgeService(executable_path=driver_name)
-        driver = EdgeWebDriver(service=service, options=options)
+        # driver_name = "msedgedriver.exe"
+        # service = EdgeService(executable_path=driver_name)
+        # driver = EdgeWebDriver(service=service, options=options)
+        driver = webdriver.Chrome(options=options)
 
     else:
-        driver_name = "chromedriver.exe"
-        service = ChromeService(executable_path=driver_name)
-        driver = ChromeWebDriver(service=service, options=options)
+        # driver_name = "chromedriver.exe"
+        # service = ChromeService(executable_path=driver_name)
+        # driver = ChromeWebDriver(service=service, options=options)
+        driver = webdriver.Edge(options=options)
 
     # driver.add_cookie(
     #     {

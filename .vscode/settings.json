@@ -1,0 +1,26 @@
+{
+	"python.analysis.typeCheckingMode": "basic",
+	"python.analysis.diagnosticSeverityOverrides": {
+		"reportOptionalMemberAccess": "none",
+		"reportGeneralTypeIssues": "none",
+		"reportUnusedExpression": "none",
+		"reportOptionalCall": "none",
+		"reportSelfClsParameterName": "none",
+		"reportCallIssue": "none",
+		"reportArgumentType": "none",
+		"reportOperatorIssue": "none",
+		"reportAttributeAccessIssue": "none",
+		"reportAssignmentType": "none",
+		"reportReturnType": "none",
+		"reportIndexIssue": "none",
+	},
+	"[python]": {
+		"editor.defaultFormatter": "ms-python.black-formatter",
+		"editor.formatOnSave": true,
+	},
+	"flake8.args": [
+		"--exclude=**/backtrader/, **/backtrader_ui_bokeh/",
+		"--max-line-length=120",
+		"--ignore=F401, E402, W291, W503, E203",
+	],
+}

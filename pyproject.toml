@@ -11,4 +11,5 @@ dependencies = [
     "orjson>=3.11.4",
     "selenium>=4.38.0",
     "termcolor>=3.2.0",
+    "webdriver-manager>=4.0.2",
 ]
