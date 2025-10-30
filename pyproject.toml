@@ -13,3 +13,7 @@ dependencies = [
     "termcolor>=3.2.0",
     "webdriver-manager>=4.0.2",
 ]
+
+[tool.ruff]
+# lint.extend-select = []
+# lint.ignore = ["F401"]
