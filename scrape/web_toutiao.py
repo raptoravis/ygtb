@@ -1,37 +1,28 @@
 import argparse
+import datetime as dttm
+import glob
 import os
 import re
 import time
-import glob
-import datetime as dttm
-from bs4 import BeautifulSoup
+from pathlib import Path
 
 # import pandas as pd
 # import requests
 # import html2text
 import commentjson
 import orjson
-from pathlib import Path
-from termcolor import colored
+from bs4 import BeautifulSoup
+from selenium import webdriver
 
 # from selenium import webdriver
-
-
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
-
-from selenium.webdriver.edge.service import Service as EdgeService
-from selenium.webdriver.edge.options import Options as EdgeOptions
-from selenium.webdriver.edge.webdriver import WebDriver as EdgeWebDriver
-
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 # from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-
-from selenium import webdriver
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+from termcolor import colored
 
 # # from webdriver_manager.chrome import ChromeDriverManager
 
@@ -405,7 +396,6 @@ def get_all_update_items(
         # cls = "js_positive_order"
 
         try:
-
             # # Locate the iframe using the updated method
             # iframe = driver.find_element(By.TAG_NAME, "iframe")
             # # Switch to the iframe
@@ -1345,7 +1335,6 @@ def download_link(
     txt = ""
     meta = ""
     try:
-
         WebDriverWait(driver, 2).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
