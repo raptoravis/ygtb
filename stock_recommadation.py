@@ -38,7 +38,8 @@ data_aggregation_agent = Agent(
     goal="Read and analyze financial data from CSV file",
     backstory="""
         You collect and aggregate financial data from the provided CSV file for the monthly financial report.
-        Analyze key financial metrics such as revenue growth, profit margins, cash flow, debt levels, and other relevant indicators.
+        Analyze key financial metrics such as revenue growth, profit margins, cash flow, debt levels,
+        and other relevant indicators.
         When asked for data, read from the CSV file using the provided function.
         """,
     verbose=True,
@@ -117,7 +118,8 @@ data_aggregation_task = Task(
     description=(
         """
         Collect and aggregate financial data from the provided CSV file for the monthly financial report.
-        Analyze key financial metrics such as revenue growth, profit margins, cash flow, debt levels, and other relevant indicators.
+        Analyze key financial metrics such as revenue growth, profit margins, cash flow, debt levels,
+        and other relevant indicators.
         """
     ),
     expected_output=("Data aggregation report"),
@@ -151,7 +153,8 @@ stock_analysis_task = Task(
 stock_recommendation_task = Task(
     description=(
         f"""
-        Generate a detailed report, analyze stock, make a recommendation (BUY if company is doing well), review accuracy, and summarize for executives.
+        Generate a detailed report, analyze stock, make a recommendation (BUY if company is doing well),
+        review accuracy, and summarize for executives.
         The company is {company}.
         """
     ),
@@ -162,34 +165,36 @@ stock_recommendation_task = Task(
 accuracy_review_task = Task(
     description=(
         """
-        Conduct a comprehensive accuracy review of the financial report and stock recommendation to ensure quality and reliability. 
-        You are also given the raw dataset in the form of a CSV file which contains the raw financial data of the company.
-        
+        Conduct a comprehensive accuracy review of the financial report and stock recommendation
+        to ensure quality and reliability.
+        You are also given the raw dataset in the form of a CSV file
+        which contains the raw financial data of the company.
+
         Your review should include:
         1. Data Validation:
            - Verify all financial calculations and metrics are correct
            - Cross-check statistical analysis results
            - Validate technical indicator calculations
            - Ensure data consistency across different sections
-        
+
         2. Logical Consistency:
            - Verify that conclusions align with the data presented
            - Check for contradictions between different analysis sections
            - Ensure recommendations are supported by evidence
            - Validate the reasoning chain from data to conclusions
-        
+
         3. Completeness Assessment:
            - Verify all required analysis components are included
            - Check that key financial metrics are addressed
            - Ensure risk factors are properly identified
            - Confirm that both positive and negative indicators are considered
-        
+
         4. Quality Standards:
            - Review clarity and readability of the report
            - Check for any misleading statements or omissions
            - Verify that disclaimers and limitations are appropriately stated
            - Ensure professional presentation standards are met
-        
+
         5. Recommendation Validation:
            - Verify that the BUY/HOLD/SELL recommendation is justified
            - Check that confidence levels are appropriate
