@@ -2,8 +2,8 @@ import os
 
 import yfinance as yf
 from crewai import Agent, Crew, Process, Task
+from crewai.tools import tool
 from dotenv import load_dotenv
-from langchain_community.tools import DuckDuckGoSearchRun
 from termcolor import colored
 
 
@@ -23,26 +23,38 @@ DASHSCOPE_API_KEY = os.environ["DASHSCOPE_API_KEY"]
 DASHSCOPE_BASE_URL = os.environ["DASHSCOPE_BASE_URL"]
 DASHSCOPE_MODEL = os.environ["DASHSCOPE_MODEL"]
 
+os.environ["OPENAI_API_KEY"] = DASHSCOPE_API_KEY
+os.environ["OPENAI_BASE_URL"] = DASHSCOPE_BASE_URL
+
+llm = DASHSCOPE_MODEL
+
 
 # === 工具 1: 获取股价和基本面 ===
-def fetch_stock_price(ticket):
+@tool
+def fetch_stock_price(ticket: str) -> str:
+    """获取股票的实时价格、市值、市盈率等关键基本面数据"""
     stock = yf.Ticker(ticket)
     info = stock.info
-    # 为了省Token，我们只提取关键信息
     data = {
         "current_price": info.get("currentPrice"),
         "market_cap": info.get("marketCap"),
-        "pe_ratio": info.get("trailingPE"),  # 市盈率
-        "recommendation": info.get("recommendationKey"),  # 雅虎的分析师建议
+        "pe_ratio": info.get("trailingPE"),
+        "recommendation": info.get("recommendationKey"),
     }
     return str(data)
 
 
 # === 工具 2: 搜索最新新闻 ===
-search_tool = DuckDuckGoSearchRun()
+@tool
+def search_tool(query: str) -> str:
+    """使用DuckDuckGo搜索互联网信息"""
+    from duckduckgo_search import DDGS
 
-# 将自定义函数包装成Agent能用的Tool (这里简化展示，实际需用@tool装饰器)
-# 假设我们已经把 fetch_stock_price 绑定到了 Agent 的 tools 列表中
+    ddgs = DDGS()
+    results = list(ddgs.text(keywords=query, max_results=5))
+    return "\n".join([f"{r['title']}: {r['body']}" for r in results])
+
+
 # 角色 1：数据猎手
 # 任务：找数据，找新闻
 scout = Agent(
@@ -51,7 +63,8 @@ scout = Agent(
     backstory="你是一名顶级市场调查员，擅长从互联网的海量信息中挖掘最关键的金融情报。",
     verbose=True,
     allow_delegation=False,
-    tools=[search_tool, fetch_stock_price],  # 记得在这里挂载工具
+    tools=[fetch_stock_price, search_tool],
+    llm=llm,
 )
 
 # 角色 2：高级分析师
@@ -62,6 +75,7 @@ analyst = Agent(
     backstory="你有20年的华尔街从业经验，擅长透过现象看本质，能敏锐地发现财报和新闻背后的猫腻。",
     verbose=True,
     allow_delegation=False,
+    llm=llm,
 )
 
 # 角色 3：投资顾问
@@ -72,6 +86,7 @@ writer = Agent(
     backstory="你的客户是忙碌的上班族，你需要用最简练的语言告诉他们结论，不需要复杂的术语。",
     verbose=True,
     allow_delegation=False,
+    llm=llm,
 )
 # 定义具体任务
 task1 = Task(
@@ -96,10 +111,14 @@ task3 = Task(
 )
 
 # 组队出发！
-crew = Crew(agents=[scout, analyst, writer], tasks=[task1, task2, task3], process=Process.sequential)
+crew = Crew(
+    agents=[scout, analyst, writer],
+    tasks=[task1, task2, task3],
+    process=Process.sequential,
+)
 
 # 比如我们想看：英伟达
 result = crew.kickoff(inputs={"ticket": "NVDA"})
 
-print("################## 研报生成完毕 ##################")
-print(result)
+glog_info("################## 研报生成完毕 ##################")
+glog_info(str(result))
