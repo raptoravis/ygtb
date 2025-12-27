@@ -2,11 +2,26 @@ import os
 
 import yfinance as yf
 from crewai import Agent, Crew, Process, Task
+from dotenv import load_dotenv
 from langchain_community.tools import DuckDuckGoSearchRun
+from termcolor import colored
+
+
+def glog_info(msg: str):
+    print(msg)
+
+
+HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".bbt")
+credentials_env_path = os.path.join(HOME_PATH, "credentials.env")
+load_dotenv(credentials_env_path, verbose=True)
+glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
 
 # 配置API KEY (这里用OpenAI，国内可用DeepSeek/Moonshot)
-os.environ["OPENAI_API_KEY"] = "sk-your-key"
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4o"
+
+
+DASHSCOPE_API_KEY = os.environ["DASHSCOPE_API_KEY"]
+DASHSCOPE_BASE_URL = os.environ["DASHSCOPE_BASE_URL"]
+DASHSCOPE_MODEL = os.environ["DASHSCOPE_MODEL"]
 
 
 # === 工具 1: 获取股价和基本面 ===
