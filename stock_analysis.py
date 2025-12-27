@@ -1,4 +1,6 @@
 import os
+import time
+from functools import lru_cache
 
 import yfinance as yf
 from crewai import Agent, Crew, Process, Task
@@ -30,18 +32,24 @@ llm = DASHSCOPE_MODEL
 
 
 # === 工具 1: 获取股价和基本面 ===
-@tool
-def fetch_stock_price(ticket: str) -> str:
-    """获取股票的实时价格、市值、市盈率等关键基本面数据"""
+@lru_cache(maxsize=32)
+def _get_stock_info(ticket: str) -> dict:
+    """内部缓存函数，用于获取股票信息"""
     stock = yf.Ticker(ticket)
     info = stock.info
-    data = {
+    return {
         "current_price": info.get("currentPrice"),
         "market_cap": info.get("marketCap"),
         "pe_ratio": info.get("trailingPE"),
         "recommendation": info.get("recommendationKey"),
     }
-    return str(data)
+
+
+@tool
+def fetch_stock_price(ticket: str) -> str:
+    """获取股票的实时价格、市值、市盈率等关键基本面数据"""
+    time.sleep(1)
+    return str(_get_stock_info(ticket))
 
 
 # === 工具 2: 搜索最新新闻 ===
