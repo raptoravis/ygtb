@@ -13,6 +13,7 @@ from termcolor import colored
 # Import ChatOllama conditionally to avoid errors if not installed
 try:
     from langchain_ollama import ChatOllama
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     ChatOllama = None
@@ -20,6 +21,7 @@ except ImportError:
 
 try:
     from langchain_openai import ChatOpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     ChatOpenAI = None
@@ -67,12 +69,15 @@ def get_llm(provider="dashscope", model="codellama"):
                 temperature=0.3,
             )
         else:
-            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL environment variables.")
+            raise ValueError(
+                "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL environment variables."
+            )
 
 
 polygon_client = RESTClient(api_key=POLYGON_API_KEY)
 
 _stock_cache = {}
+
 
 def get_tickers(locale):
     # get exchanges
