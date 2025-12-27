@@ -10,6 +10,21 @@ from dotenv import load_dotenv
 from polygon import RESTClient
 from termcolor import colored
 
+# Import ChatOllama conditionally to avoid errors if not installed
+try:
+    from langchain_ollama import ChatOllama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    ChatOllama = None
+    OLLAMA_AVAILABLE = False
+
+try:
+    from langchain_openai import ChatOpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    ChatOpenAI = None
+    OPENAI_AVAILABLE = False
+
 
 def glog_info(msg: str):
     print(msg)
@@ -21,34 +36,52 @@ load_dotenv(credentials_env_path, verbose=True)
 glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
 
 # 配置API KEY (这里用OpenAI，国内可用DeepSeek/Moonshot)
+# 添加Ollama支持
 
-
-DASHSCOPE_API_KEY = os.environ["DASHSCOPE_API_KEY"]
-DASHSCOPE_BASE_URL = os.environ["DASHSCOPE_BASE_URL"]
-DASHSCOPE_MODEL = os.environ["DASHSCOPE_MODEL"]
+DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
+DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
+DASHSCOPE_MODEL = os.environ.get("DASHSCOPE_MODEL", "qwen-max")
 POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
 
-os.environ["OPENAI_API_KEY"] = DASHSCOPE_API_KEY
-os.environ["OPENAI_BASE_URL"] = DASHSCOPE_BASE_URL
 
-llm = DASHSCOPE_MODEL
+# Determine which LLM to use
+def get_llm(provider="dashscope", model="codellama"):
+    if provider.lower() == "ollama":
+        if not OLLAMA_AVAILABLE:
+            raise ImportError("langchain-ollama is not installed. Please install it with: pip install langchain-ollama")
+        # Use Ollama with specified model
+        return ChatOllama(
+            model=model,
+            base_url="http://localhost:11434",  # Default Ollama URL
+            temperature=0.3,
+        )
+    else:
+        if not OPENAI_AVAILABLE:
+            raise ImportError("langchain-openai is not installed. Please install it with: pip install langchain-openai")
+        # Use Dashscope/OpenAI compatible provider
+        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
+            return ChatOpenAI(
+                api_key=DASHSCOPE_API_KEY,
+                model=DASHSCOPE_MODEL,
+                base_url=DASHSCOPE_BASE_URL,
+                temperature=0.3,
+            )
+        else:
+            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL environment variables.")
+
+
 polygon_client = RESTClient(api_key=POLYGON_API_KEY)
 
 _stock_cache = {}
 
-# # XSHG XSHE
-# tickers = list(polygon_client.list_tickers(market="stocks", exchange=None, active=True, limit=1000))
-# glog_info(tickers)
-
-
 def get_tickers(locale):
-    # # get exchanges
+    # get exchanges
     exchanges = pd.DataFrame(polygon_client.get_exchanges(asset_class="stocks", locale=locale))
 
-    # # exchanges MIC for use in list tickers
+    # exchanges MIC for use in list tickers
     # print(exchanges.mic)
 
-    # # remove duplicates and remove None
+    # remove duplicates and remove None
     exchangeList = list(set(exchanges.mic))
     exchangeList.remove(None)
 
@@ -66,12 +99,6 @@ def get_tickers(locale):
     finalTickerList = set(usTickers)
     glog_info(finalTickerList)
     pass
-
-
-# # locale = "us"
-# locale = "global"
-
-# get_tickers(locale)
 
 
 # === 工具 1: 获取股价和基本面 ===
@@ -104,20 +131,6 @@ def fetch_stock_price(ticket: str) -> str:
             current_price = aggs[-1].close
 
         pe_ratio = None
-        # try:
-        #     financials_url = f"https://api.polygon.io/vX/reference/financials?ticker={ticket}&apikey={POLYGON_API_KEY}"
-        #     financials_resp = requests.get(financials_url).json()
-        #     if financials_resp.get("results") and len(financials_resp["results"]) > 0:
-        #         pe_data = (
-        #             financials_resp["results"][0]
-        #             .get("financials", {})
-        #             .get("income_statement", {})
-        #             .get("basics", {})
-        #         )
-        #         pe_ratio = pe_data.get("price_earnings_ratio")
-        # except Exception as ex:
-        #     glog_info(ex)
-        #     pass
 
         result = {
             "current_price": current_price,
@@ -142,48 +155,49 @@ def search_tool(query: str) -> str:
     return "\n".join([f"{r['title']}: {r['body']}" for r in results])
 
 
-# 角色 1：数据猎手
-scout = Agent(
-    role="金融情报搜集员",
-    goal="搜集指定股票 {ticket} 的实时价格、基本面数据以及最近3天的重磅新闻",
-    backstory="你是一名顶级市场调查员，擅长从互联网的海量信息中挖掘最关键的金融情报。",
-    verbose=True,
-    allow_delegation=False,
-    tools=[fetch_stock_price, search_tool],
-    llm=llm,
-)
+# Define agent creation functions that will be called after LLM is configured
+def create_scout_agent(llm):
+    return Agent(
+        role="金融情报搜集员",
+        goal="搜集指定股票 {ticket} 的实时价格、基本面数据以及最近3天的重磅新闻",
+        backstory="你是一名顶级市场调查员，擅长从互联网的海量信息中挖掘最关键的金融情报。",
+        verbose=True,
+        allow_delegation=False,
+        tools=[fetch_stock_price, search_tool],
+        llm=llm,
+    )
 
-# 角色 2：高级分析师
-# 任务：分析数据，看多还是看空
-analyst = Agent(
-    role="资深股票分析师",
-    goal="根据搜集到的数据和新闻，分析该股票的投资逻辑和潜在风险",
-    backstory="你有20年的华尔街从业经验，擅长透过现象看本质，能敏锐地发现财报和新闻背后的猫腻。",
-    verbose=True,
-    allow_delegation=False,
-    llm=llm,
-)
 
-# 角色 3：投资顾问
-# 任务：写报告
-writer = Agent(
-    role="私人投资顾问",
-    goal="将分析结果汇总成一篇通俗易懂的中文投资研报，并给出最终建议（买入/卖出/观望）",
-    backstory="你的客户是忙碌的上班族，你需要用最简练的语言告诉他们结论，不需要复杂的术语。",
-    verbose=True,
-    allow_delegation=False,
-    llm=llm,
-)
-# 定义具体任务
+def create_analyst_agent(llm):
+    return Agent(
+        role="资深股票分析师",
+        goal="根据搜集到的数据和新闻，分析该股票的投资逻辑和潜在风险",
+        backstory="你有20年的华尔街从业经验，擅长透过现象看本质，能敏锐地发现财报和新闻背后的猫腻。",
+        verbose=True,
+        allow_delegation=False,
+        llm=llm,
+    )
+
+
+def create_writer_agent(llm):
+    return Agent(
+        role="私人投资顾问",
+        goal="将分析结果汇总成一篇通俗易懂的中文投资研报，并给出最终建议（买入/卖出/观望）",
+        backstory="你的客户是忙碌的上班族，你需要用最简练的语言告诉他们结论，不需要复杂的术语。",
+        verbose=True,
+        allow_delegation=False,
+        llm=llm,
+    )
+
+
+# 定义具体任务 - agents will be assigned after they are created with proper LLM
 task1 = Task(
     description="获取 {ticket} 的最新股价数据，并搜索过去48小时关于该公司的重要新闻。",
-    agent=scout,
     expected_output="包含股价数据和3条关键新闻摘要的报告。",
 )
 
 task2 = Task(
     description="阅读情报员提供的数据，分析 {ticket} 的当前形势。关注市盈率是否过高？新闻是利好还是利空？",
-    agent=analyst,
     expected_output="一份包含基本面分析、情绪分析和风险提示的草稿。",
 )
 
@@ -192,22 +206,49 @@ task3 = Task(
     根据分析师的草稿，用中文写一份精美的Markdown格式研报。
     包括：1.核心数据 2.新闻摘要 3.深度分析 4.最终操作建议。
     """,
-    agent=writer,
     expected_output="一份完整的中文投资研报。",
-)
-
-# 组队出发！
-crew = Crew(
-    agents=[scout, analyst, writer],
-    tasks=[task1, task2, task3],
-    process=Process.sequential,
 )
 
 parser = argparse.ArgumentParser(description="股票分析研报生成工具")
 parser.add_argument("-t", "--ticket", type=str, default="NVDA", help="股票代码，例如：NVDA, AAPL")
+parser.add_argument(
+    "--provider", type=str, default="dashscope", choices=["dashscope", "ollama"], help="模型提供商: dashscope 或 ollama"
+)
+parser.add_argument(
+    "--model", type=str, default="codellama", help="当使用ollama时指定模型名称，例如: codellama, llama3"
+)
 args = parser.parse_args()
 
-glog_info(colored(f"正在分析股票: {args.ticket}", "cyan"))
-result = crew.kickoff(inputs={"ticket": args.ticket})
+# Check if required packages are available when requested
+if args.provider == "ollama" and not OLLAMA_AVAILABLE:
+    raise ImportError("langchain-ollama is not installed. Please install it with: pip install langchain-ollama")
 
-glog_info("################## 研报生成完毕 ##################")
+if __name__ == "__main__":
+    # Select the appropriate LLM based on provider
+    llm = get_llm(provider=args.provider, model=args.model)
+
+    # Create agents with the selected LLM
+    scout = create_scout_agent(llm)
+    analyst = create_analyst_agent(llm)
+    writer = create_writer_agent(llm)
+
+    # Assign agents to tasks
+    task1.agent = scout
+    task2.agent = analyst
+    task3.agent = writer
+
+    # 组队出发！
+    crew = Crew(
+        agents=[scout, analyst, writer],
+        tasks=[task1, task2, task3],
+        process=Process.sequential,
+    )
+
+    glog_info(colored(f"正在分析股票: {args.ticket}", "cyan"))
+    glog_info(colored(f"使用模型提供商: {args.provider}", "cyan"))
+    if args.provider == "ollama":
+        glog_info(colored(f"使用Ollama模型: {args.model}", "cyan"))
+
+    result = crew.kickoff(inputs={"ticket": args.ticket})
+
+    glog_info("################## 研报生成完毕 ##################")
