@@ -3,29 +3,12 @@ import os
 import time
 
 import pandas as pd
-from crewai import Agent, Crew, Process, Task
+from crewai import LLM, Agent, Crew, Process, Task
 from crewai.tools import tool
 from ddgs import DDGS
 from dotenv import load_dotenv
 from polygon import RESTClient
 from termcolor import colored
-
-# Import ChatOllama conditionally to avoid errors if not installed
-try:
-    from langchain_ollama import ChatOllama
-
-    OLLAMA_AVAILABLE = True
-except ImportError:
-    ChatOllama = None
-    OLLAMA_AVAILABLE = False
-
-try:
-    from langchain_openai import ChatOpenAI
-
-    OPENAI_AVAILABLE = True
-except ImportError:
-    ChatOpenAI = None
-    OPENAI_AVAILABLE = False
 
 
 def glog_info(msg: str):
@@ -46,31 +29,26 @@ DASHSCOPE_MODEL = os.environ.get("DASHSCOPE_MODEL", "qwen-max")
 POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
 
 
-# Determine which LLM to use
+# Determine which LLM to use - using CrewAI's native LLM class
 def get_llm(provider="dashscope", model="codellama"):
     if provider.lower() == "ollama":
-        if not OLLAMA_AVAILABLE:
-            raise ImportError("langchain-ollama is not installed. Please install it with: pip install langchain-ollama")
         # Use Ollama with specified model
-        return ChatOllama(
-            model=model,
-            base_url="http://localhost:11434",  # Default Ollama URL
+        return LLM(
+            model=f"ollama/{model}",
+            base_url="http://localhost:11434",
             temperature=0.3,
         )
     else:
-        if not OPENAI_AVAILABLE:
-            raise ImportError("langchain-openai is not installed. Please install it with: pip install langchain-openai")
-        # Use Dashscope/OpenAI compatible provider
-        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
-            return ChatOpenAI(
+        # Use Dashscope - LiteLLM has native support with dashscope/ prefix
+        if DASHSCOPE_API_KEY:
+            return LLM(
+                model=f"dashscope/{DASHSCOPE_MODEL}",
                 api_key=DASHSCOPE_API_KEY,
-                model=DASHSCOPE_MODEL,
-                base_url=DASHSCOPE_BASE_URL,
                 temperature=0.3,
             )
         else:
             raise ValueError(
-                "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL environment variables."
+                "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var."
             )
 
 
@@ -224,9 +202,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# Check if required packages are available when requested
-if args.provider == "ollama" and not OLLAMA_AVAILABLE:
-    raise ImportError("langchain-ollama is not installed. Please install it with: pip install langchain-ollama")
 
 if __name__ == "__main__":
     # Select the appropriate LLM based on provider
@@ -246,6 +221,7 @@ if __name__ == "__main__":
     crew = Crew(
         agents=[scout, analyst, writer],
         tasks=[task1, task2, task3],
+        manager_llm=llm,
         process=Process.sequential,
     )
 
