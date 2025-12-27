@@ -1,6 +1,8 @@
+import argparse
 import os
 import time
 
+import pandas as pd
 from crewai import Agent, Crew, Process, Task
 from crewai.tools import tool
 from ddgs import DDGS
@@ -33,6 +35,43 @@ llm = DASHSCOPE_MODEL
 polygon_client = RESTClient(api_key=POLYGON_API_KEY)
 
 _stock_cache = {}
+
+# # XSHG XSHE
+# tickers = list(polygon_client.list_tickers(market="stocks", exchange=None, active=True, limit=1000))
+# glog_info(tickers)
+
+
+def get_tickers(locale):
+    # # get exchanges
+    exchanges = pd.DataFrame(polygon_client.get_exchanges(asset_class="stocks", locale=locale))
+
+    # # exchanges MIC for use in list tickers
+    # print(exchanges.mic)
+
+    # # remove duplicates and remove None
+    exchangeList = list(set(exchanges.mic))
+    exchangeList.remove(None)
+
+    # get all tickers from all US exchanges
+    usTickers = []
+    for x in exchangeList:
+        # page through response
+        for t in polygon_client.list_tickers(market="stocks", exchange=x, active=True, limit=1000):
+            # add to list
+            usTickers.append(t.ticker)
+        # print exchange when finished
+        print(x)
+
+    # final ticker list
+    finalTickerList = set(usTickers)
+    glog_info(finalTickerList)
+    pass
+
+
+# # locale = "us"
+# locale = "global"
+
+# get_tickers(locale)
 
 
 # === 工具 1: 获取股价和基本面 ===
@@ -164,9 +203,11 @@ crew = Crew(
     process=Process.sequential,
 )
 
-# 比如我们想看：英伟达
-result = crew.kickoff(inputs={"ticket": "NVDA"})
+parser = argparse.ArgumentParser(description="股票分析研报生成工具")
+parser.add_argument("-t", "--ticket", type=str, default="NVDA", help="股票代码，例如：NVDA, AAPL")
+args = parser.parse_args()
+
+glog_info(colored(f"正在分析股票: {args.ticket}", "cyan"))
+result = crew.kickoff(inputs={"ticket": args.ticket})
 
 glog_info("################## 研报生成完毕 ##################")
-# glog_info(str(result))
-pass
