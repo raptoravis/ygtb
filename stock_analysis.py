@@ -1,11 +1,11 @@
 import os
 import time
-from functools import lru_cache
 
-import yfinance as yf
 from crewai import Agent, Crew, Process, Task
 from crewai.tools import tool
+from ddgs import DDGS
 from dotenv import load_dotenv
+from polygon import RESTClient
 from termcolor import colored
 
 
@@ -24,47 +24,86 @@ glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
 DASHSCOPE_API_KEY = os.environ["DASHSCOPE_API_KEY"]
 DASHSCOPE_BASE_URL = os.environ["DASHSCOPE_BASE_URL"]
 DASHSCOPE_MODEL = os.environ["DASHSCOPE_MODEL"]
+POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
 
 os.environ["OPENAI_API_KEY"] = DASHSCOPE_API_KEY
 os.environ["OPENAI_BASE_URL"] = DASHSCOPE_BASE_URL
 
 llm = DASHSCOPE_MODEL
+polygon_client = RESTClient(api_key=POLYGON_API_KEY)
+
+_stock_cache = {}
 
 
 # === 工具 1: 获取股价和基本面 ===
-@lru_cache(maxsize=32)
-def _get_stock_info(ticket: str) -> dict:
-    """内部缓存函数，用于获取股票信息"""
-    stock = yf.Ticker(ticket)
-    info = stock.info
-    return {
-        "current_price": info.get("currentPrice"),
-        "market_cap": info.get("marketCap"),
-        "pe_ratio": info.get("trailingPE"),
-        "recommendation": info.get("recommendationKey"),
-    }
-
-
 @tool
 def fetch_stock_price(ticket: str) -> str:
     """获取股票的实时价格、市值、市盈率等关键基本面数据"""
-    time.sleep(1)
-    return str(_get_stock_info(ticket))
+    if ticket in _stock_cache:
+        return str(_stock_cache[ticket])
+
+    time.sleep(2)
+
+    try:
+        from datetime import datetime, timedelta
+
+        ticker_data = polygon_client.get_ticker_details(ticket)
+        time.sleep(1)
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=5)
+        aggs = polygon_client.get_aggs(
+            ticket,
+            1,
+            "day",
+            start_date.strftime("%Y-%m-%d"),
+            end_date.strftime("%Y-%m-%d"),
+        )
+
+        current_price = None
+        if aggs and len(aggs) > 0:
+            current_price = aggs[-1].close
+
+        pe_ratio = None
+        # try:
+        #     financials_url = f"https://api.polygon.io/vX/reference/financials?ticker={ticket}&apikey={POLYGON_API_KEY}"
+        #     financials_resp = requests.get(financials_url).json()
+        #     if financials_resp.get("results") and len(financials_resp["results"]) > 0:
+        #         pe_data = (
+        #             financials_resp["results"][0]
+        #             .get("financials", {})
+        #             .get("income_statement", {})
+        #             .get("basics", {})
+        #         )
+        #         pe_ratio = pe_data.get("price_earnings_ratio")
+        # except Exception as ex:
+        #     glog_info(ex)
+        #     pass
+
+        result = {
+            "current_price": current_price,
+            "market_cap": ticker_data.market_cap,
+            "pe_ratio": pe_ratio,
+            "ticker": ticket,
+        }
+        _stock_cache[ticket] = result
+        return str(result)
+    except Exception as e:
+        if ticket in _stock_cache:
+            return f"API受限，使用缓存数据: {_stock_cache[ticket]}"
+        return f"获取数据失败: {str(e)}"
 
 
 # === 工具 2: 搜索最新新闻 ===
 @tool
 def search_tool(query: str) -> str:
     """使用DuckDuckGo搜索互联网信息"""
-    from duckduckgo_search import DDGS
-
     ddgs = DDGS()
-    results = list(ddgs.text(keywords=query, max_results=5))
+    results = list(ddgs.text(query, max_results=5))
     return "\n".join([f"{r['title']}: {r['body']}" for r in results])
 
 
 # 角色 1：数据猎手
-# 任务：找数据，找新闻
 scout = Agent(
     role="金融情报搜集员",
     goal="搜集指定股票 {ticket} 的实时价格、基本面数据以及最近3天的重磅新闻",
@@ -129,4 +168,5 @@ crew = Crew(
 result = crew.kickoff(inputs={"ticket": "NVDA"})
 
 glog_info("################## 研报生成完毕 ##################")
-glog_info(str(result))
+# glog_info(str(result))
+pass
