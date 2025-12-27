@@ -1,4 +1,5 @@
 # L7: Build a Crew to Tailor Job Applications
+# https://learn.deeplearning.ai/courses/multi-ai-agent-systems-with-crewai/lesson/a8ecj/build-a-crew-to-tailor-job-applications
 
 # Warning control
 import os
