@@ -24,8 +24,8 @@ glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
 # 添加Ollama支持
 
 DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
-DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
-DASHSCOPE_MODEL = os.environ.get("DASHSCOPE_MODEL", "qwen-max")
+DASHSCOPE_MODEL = "qwen3-coder-plus"
+
 POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
 
 
@@ -47,9 +47,7 @@ def get_llm(provider="dashscope", model="codellama"):
                 temperature=0.3,
             )
         else:
-            raise ValueError(
-                "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var."
-            )
+            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.")
 
 
 polygon_client = RESTClient(api_key=POLYGON_API_KEY)

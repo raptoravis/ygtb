@@ -897,7 +897,7 @@ wheels = [
 
 [[package]]
 name = "crewai"
-version = "1.7.1"
+version = "1.7.2"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "aiosqlite" },
@@ -926,9 +926,9 @@ dependencies = [
     { name = "tomli-w" },
     { name = "uv" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/84/9b/4f8e57de3cb1f5d28851ddcd6e5382ca6b533446bc1584dbc288db4dbf65/crewai-1.7.1.tar.gz", hash = "sha256:7b1b3423916aa795e23ca7bbf789d3c142276bc5da50e008d9572ff364c93505", size = 3727684, upload-time = "2025-12-16T05:53:24.239Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/3c/f2/2e51f7e402495e3644c59bd429a6d93994313bdc733d3c5a97d1f8391ca5/crewai-1.7.2.tar.gz", hash = "sha256:12c6430cbb81d361d2c69c6d9f508c9373e322f79811017a697bd4b66425e694", size = 3727763, upload-time = "2025-12-19T21:44:01.549Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/60/4c/ec2cd05bdcd200dcde88eecfe9a23952f7719cf2348ca9146c10cbc0674b/crewai-1.7.1-py3-none-any.whl", hash = "sha256:5abc777008bd22133dcbb2d40426a573d6a5399df2bc5369c9116bdf3fcdf943", size = 666700, upload-time = "2025-12-16T05:53:22.521Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/58/81/0a5a71c93b577aa899d70449b6820f088167c5578bf32769567ffff0e9cb/crewai-1.7.2-py3-none-any.whl", hash = "sha256:ebf5275a38deb98c768d5bc24d664e1e4c1c57528000774f2b6cdfa6e3791f3e", size = 666804, upload-time = "2025-12-19T21:43:59.147Z" },
 ]
 
 [package.optional-dependencies]
@@ -938,7 +938,7 @@ tools = [
 
 [[package]]
 name = "crewai-tools"
-version = "1.7.1"
+version = "1.7.2"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -952,9 +952,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "youtube-transcript-api" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/66/87/a8b53481587159ef86b60d464a773e584cbc14b0bf46bc944cc04cf56286/crewai_tools-1.7.1.tar.gz", hash = "sha256:b5559bafec2e1d9b3268979911743d6605862b738de1d0429ac0e442165f81af", size = 805968, upload-time = "2025-12-16T05:53:27.828Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/84/d0/5870026ea6459f1e4a1d8287846962c5592999ade5e34cd273e1d612767e/crewai_tools-1.7.2.tar.gz", hash = "sha256:c138c1fd49945f989b8fe053e80fc03220328a236768e879e8f59f696c7c0bb1", size = 806589, upload-time = "2025-12-19T21:44:05.783Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/d9/46/80d41cf2231f62484fa974514f733ed3967be3d67df5e5e56684bfcba810/crewai_tools-1.7.1-py3-none-any.whl", hash = "sha256:9bf055f246109b9f36682764b16dbfce58485a2d555212c8473b6c087ee6481e", size = 766671, upload-time = "2025-12-16T05:53:25.698Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/b9/36/51bac8b0a7d39d37e80a209a76333873efb0fd4c3c6b6b9b980fb7dd7048/crewai_tools-1.7.2-py3-none-any.whl", hash = "sha256:2d1a07ca9ee77a50b0aab9683b66fc84d988b413a7b09cd47d77a29366ce332c", size = 766789, upload-time = "2025-12-19T21:44:03.608Z" },
 ]
 
 [[package]]
@@ -5729,7 +5729,7 @@ requires-dist = [
     { name = "bokeh-sampledata", specifier = ">=2025.0" },
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "commentjson", specifier = ">=0.9.0" },
-    { name = "crewai", extras = ["tools"], specifier = ">=1.7.1" },
+    { name = "crewai", extras = ["tools"], specifier = ">=1.7.2" },
     { name = "dash", specifier = ">=3.2.0" },
     { name = "dash-bootstrap-components", specifier = ">=2.0.4" },
     { name = "ddgs", specifier = ">=9.10.0" },
