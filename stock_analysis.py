@@ -24,26 +24,51 @@ glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
 # 添加Ollama支持
 
 DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
-DASHSCOPE_MODEL = "qwen3-coder-plus"
+DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
+
+ANTIGRAVITY_API_KEY = os.environ.get("ANTIGRAVITY_API_KEY")
+ANTIGRAVITY_BASE_URL = os.environ.get("ANTIGRAVITY_BASE_URL")
 
 POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
 
 
 # Determine which LLM to use - using CrewAI's native LLM class
-def get_llm(provider="dashscope", model="codellama"):
+def get_llm(provider="antigravity", model=None):
     if provider.lower() == "ollama":
         # Use Ollama with specified model
+        model = model or "codellama"
+        glog_info(f"{provider} {model}")
+
         return LLM(
-            model=f"ollama/{model}",
+            model=f"{model}",
             base_url="http://localhost:11434",
             temperature=0.3,
         )
+    elif provider.lower() == "antigravity":
+        # Use Antigravity API
+        if ANTIGRAVITY_API_KEY and ANTIGRAVITY_BASE_URL:
+            model = model or "gemini-3-flash"
+            glog_info(f"{provider} {model}")
+            return LLM(
+                model=model,
+                api_key=ANTIGRAVITY_API_KEY,
+                base_url=ANTIGRAVITY_BASE_URL,
+                temperature=0.3,
+            )
+        else:
+            raise ValueError(
+                "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
+            )
     else:
         # Use Dashscope - LiteLLM has native support with dashscope/ prefix
-        if DASHSCOPE_API_KEY:
+        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
+            model = model or "qwen3-coder-plus"
+            glog_info(f"{provider} {model}")
+
             return LLM(
-                model=f"dashscope/{DASHSCOPE_MODEL}",
+                model=model,
                 api_key=DASHSCOPE_API_KEY,
+                base_url=DASHSCOPE_BASE_URL,
                 temperature=0.3,
             )
         else:
@@ -193,10 +218,17 @@ task3 = Task(
 parser = argparse.ArgumentParser(description="股票分析研报生成工具")
 parser.add_argument("-t", "--ticket", type=str, default="NVDA", help="股票代码，例如：NVDA, AAPL")
 parser.add_argument(
-    "--provider", type=str, default="dashscope", choices=["dashscope", "ollama"], help="模型提供商: dashscope 或 ollama"
+    "--provider",
+    type=str,
+    default="antigravity",
+    choices=["dashscope", "ollama", "antigravity"],
+    help="模型提供商: dashscope, ollama 或 antigravity",
 )
 parser.add_argument(
-    "--model", type=str, default="codellama", help="当使用ollama时指定模型名称，例如: codellama, llama3"
+    "--model",
+    type=str,
+    default="",
+    help="当使用ollama时指定模型名称，例如: codellama, llama3",
 )
 args = parser.parse_args()
 
