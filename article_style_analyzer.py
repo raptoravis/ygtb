@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from datetime import datetime
+from functools import partial
 
 from bokeh.application import Application
 from bokeh.application.handlers.function import FunctionHandler
@@ -109,15 +110,11 @@ class StyleTab:
         self.add_article_button = Button(label="添加文章", button_type="success", width=120, height=40)
         self.delete_style_button = Button(label="删除风格", button_type="danger", width=120, height=40)
 
-        self.articles_preview_div = Div(text="", width=700)
-
         self.add_article_button.on_click(self.add_article)
         self.delete_style_button.on_click(self.delete_style)
 
+        self.articles_preview_div = column(children=[])
         self.update_articles_display()
-
-        self.delete_article_button = Button(label="删除选中的文章", button_type="danger", width=680, height=40)
-        self.delete_article_button.on_click(self.delete_article)
 
         self.panel = TabPanel(
             child=column(
@@ -126,7 +123,6 @@ class StyleTab:
                 self.article_input,
                 row(self.add_article_button),
                 self.articles_preview_div,
-                self.delete_article_button,
             ),
             title=style_data.get("name", "未命名风格"),
         )
@@ -140,22 +136,27 @@ class StyleTab:
 
     def update_articles_display(self):
         articles = self.style_data.get("articles", [])
+        children = []
+
         if not articles:
-            self.articles_preview_div.text = "<p>暂无参考文章</p>"
+            children.append(Div(text="<p>暂无参考文章</p>"))
         else:
-            html = "<h4>参考文章列表（点击下方按钮删除最后一篇）:</h4>"
+            children.append(Div(text="<h4>参考文章列表:</h4>"))
             for i, article in enumerate(articles):
-                is_last = i == len(articles) - 1
-                border_color = "#4CAF50" if is_last else "#ddd"
-                bg_color = "#e8f5e9" if is_last else "#f5f5f5"
-                last_label = " <strong>[将被删除]</strong>" if is_last else ""
-                html += f"""
-                <div style="border: 1px solid {border_color}; padding: 8px; margin: 5px 0; background-color: {bg_color};">
-                    <p><strong>文章 {i + 1}{last_label}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
-                    <p>{article["content"]}...</p>
-                </div>
-                """
-            self.articles_preview_div.text = html
+                article_div = Div(
+                    text=f"""
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; background-color: #f9f9f9;">
+                        <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
+                        <p>{article["content"]}</p>
+                    </div>
+                    """,
+                    width=560,
+                )
+                delete_button = Button(label="删除", button_type="danger", width=100, height=30)
+                delete_button.on_click(partial(self.delete_article_by_index, i))
+                children.append(row(article_div, delete_button))
+
+        self.articles_preview_div.children = children
 
     def add_article(self):
         content = self.article_input.value.strip()
@@ -176,6 +177,13 @@ class StyleTab:
         articles = self.style_data.get("articles", [])
         if articles:
             self.style_data["articles"] = articles[:-1]
+            save_styles(self.styles_list)
+            self.update_articles_display()
+
+    def delete_article_by_index(self, index):
+        articles = self.style_data.get("articles", [])
+        if 0 <= index < len(articles):
+            del self.style_data["articles"][index]
             save_styles(self.styles_list)
             self.update_articles_display()
 
