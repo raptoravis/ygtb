@@ -130,12 +130,17 @@ class StyleTab:
         )
 
         self.name_input.on_change("value", self.on_name_change)
+        self.desc_input.on_change("value", self.on_desc_change)
 
     def on_name_change(self, attr, old, new):
         new_name = new.strip() or "未命名风格"
         self.style_data["name"] = new_name
         self.panel.title = new_name
         self.update_ui_callback()
+
+    def on_desc_change(self, attr, old, new):
+        self.style_data["description"] = new
+        save_styles(self.styles_list)
 
     def update_articles_display(self):
         articles = self.style_data.get("articles", [])
@@ -156,12 +161,12 @@ class StyleTab:
             for i, article in enumerate(articles):
                 article_div = Div(
                     text=f"""
-                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; background-color: #f9f9f9;">
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; background-color: #f9f9f9; width: 680px; box-sizing: border-box;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
                         <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(article["content"])}</div>
                     </div>
                     """,
-                    width=560,
+                    width=700,
                 )
                 children.append(article_div)
 
