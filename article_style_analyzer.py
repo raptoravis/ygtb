@@ -2,13 +2,12 @@ import argparse
 import json
 import os
 from datetime import datetime
-from functools import partial
 
 from bokeh.application import Application
 from bokeh.application.handlers.function import FunctionHandler
 from bokeh.document import Document
 from bokeh.layouts import column, row
-from bokeh.models import Button, Div, TabPanel, Tabs, TextAreaInput, TextInput
+from bokeh.models import Button, Div, Select, TabPanel, Tabs, TextAreaInput, TextInput
 from bokeh.server.server import Server
 from crewai import Agent, Crew, Process, Task
 from termcolor import colored
@@ -79,11 +78,10 @@ def analyze_article_with_style(article_text, reference_articles, style_name, sty
 
 
 class StyleTab:
-    def __init__(self, style_data, styles_list, update_ui_callback, delete_style_callback):
+    def __init__(self, style_data, styles_list, update_ui_callback):
         self.style_data = style_data
         self.styles_list = styles_list
         self.update_ui_callback = update_ui_callback
-        self.delete_style_callback = delete_style_callback
 
         self.name_input = TextInput(
             value=style_data.get("name", ""),
@@ -108,20 +106,22 @@ class StyleTab:
         )
 
         self.add_article_button = Button(label="添加文章", button_type="success", width=120, height=40)
-        self.delete_style_button = Button(label="删除风格", button_type="danger", width=120, height=40)
+
+        self.article_select = Select(title="选择要删除的文章", value="", options=[], width=200)
+        self.delete_article_button = Button(label="删除选中文章", button_type="danger", width=120, height=40)
 
         self.add_article_button.on_click(self.add_article)
-        self.delete_style_button.on_click(self.delete_style)
+        self.delete_article_button.on_click(self.delete_selected_article)
 
         self.articles_preview_div = column(children=[])
         self.update_articles_display()
 
         self.panel = TabPanel(
             child=column(
-                row(self.name_input, self.delete_style_button),
+                row(self.name_input),
                 self.desc_input,
                 self.article_input,
-                row(self.add_article_button),
+                row(self.add_article_button, self.article_select, self.delete_article_button),
                 self.articles_preview_div,
             ),
             title=style_data.get("name", "未命名风格"),
@@ -133,10 +133,19 @@ class StyleTab:
         new_name = new.strip() or "未命名风格"
         self.style_data["name"] = new_name
         self.panel.title = new_name
+        self.update_ui_callback()
 
     def update_articles_display(self):
         articles = self.style_data.get("articles", [])
         children = []
+
+        # Update select options
+        options = [(str(i), f"文章 {i + 1}") for i in range(len(articles))]
+        self.article_select.options = options
+
+        # If the current value is no longer valid, reset it
+        if self.article_select.value and self.article_select.value not in [opt[0] for opt in options]:
+            self.article_select.value = ""
 
         if not articles:
             children.append(Div(text="<p>暂无参考文章</p>"))
@@ -152,9 +161,7 @@ class StyleTab:
                     """,
                     width=560,
                 )
-                delete_button = Button(label="删除", button_type="danger", width=100, height=30)
-                delete_button.on_click(partial(self.delete_article_by_index, i))
-                children.append(row(article_div, delete_button))
+                children.append(article_div)
 
         self.articles_preview_div.children = children
 
@@ -173,12 +180,15 @@ class StyleTab:
             self.article_input.value = ""
             self.update_articles_display()
 
-    def delete_article(self):
-        articles = self.style_data.get("articles", [])
-        if articles:
-            self.style_data["articles"] = articles[:-1]
-            save_styles(self.styles_list)
-            self.update_articles_display()
+    def delete_selected_article(self):
+        val = self.article_select.value
+        if val:
+            try:
+                idx = int(val)
+                self.delete_article_by_index(idx)
+                self.article_select.value = ""
+            except ValueError:
+                pass
 
     def delete_article_by_index(self, index):
         articles = self.style_data.get("articles", [])
@@ -186,9 +196,6 @@ class StyleTab:
             del self.style_data["articles"][index]
             save_styles(self.styles_list)
             self.update_articles_display()
-
-    def delete_style(self):
-        self.delete_style_callback(self.style_data)
 
     def update_data(self):
         new_name = self.name_input.value or "未命名风格"
@@ -200,7 +207,10 @@ class StyleTab:
 def make_document(doc: Document, provider, model):
     styles_list = load_styles()
 
-    add_style_button = Button(label="添加新风格", button_type="primary", width=680, height=40)
+    add_style_button = Button(label="添加新风格", button_type="primary", width=150, height=40)
+
+    style_select = Select(title="选择要删除的风格", value="", options=[], width=200)
+    delete_style_button = Button(label="删除选中风格", button_type="danger", width=150, height=40)
 
     style_tabs = []
     tabs_widget = Tabs(tabs=[])
@@ -214,7 +224,6 @@ def make_document(doc: Document, provider, model):
                 style_data,
                 styles_list,
                 update_style_tabs,
-                delete_style,
             )
             style_tabs.append(style_tab)
 
@@ -226,6 +235,14 @@ def make_document(doc: Document, provider, model):
         new_tabs_widget = create_style_tabs()
         left_column.children[2] = new_tabs_widget
         tabs_widget = new_tabs_widget
+        update_style_select_options()
+
+    def update_style_select_options():
+        options = [(str(i), s.get("name", "未命名风格")) for i, s in enumerate(styles_list)]
+        style_select.options = options
+        # Reset selection if invalid
+        if style_select.value and style_select.value not in [opt[0] for opt in options]:
+            style_select.value = ""
 
     def add_style():
         new_style = {
@@ -237,13 +254,23 @@ def make_document(doc: Document, provider, model):
         save_styles(styles_list)
         update_style_tabs()
 
-    def delete_style(style_data):
-        if style_data in styles_list:
-            styles_list.remove(style_data)
-            save_styles(styles_list)
-            update_style_tabs()
+    def delete_selected_style():
+        val = style_select.value
+        if val:
+            try:
+                idx = int(val)
+                if 0 <= idx < len(styles_list):
+                    del styles_list[idx]
+                    save_styles(styles_list)
+                    style_select.value = ""
+                    update_style_tabs()
+            except ValueError:
+                pass
 
     add_style_button.on_click(add_style)
+    delete_style_button.on_click(delete_selected_style)
+
+    update_style_select_options()
 
     target_article_input = TextAreaInput(
         title="输入需要风格转换的文章",
@@ -316,7 +343,7 @@ def make_document(doc: Document, provider, model):
 
     left_column = column(
         Div(text="<h2>风格管理</h2>", width=700),
-        add_style_button,
+        row(add_style_button, style_select, delete_style_button),
         initial_tabs,
     )
 
