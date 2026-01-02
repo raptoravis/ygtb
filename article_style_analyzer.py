@@ -161,9 +161,12 @@ class StyleTab:
             for i, article in enumerate(articles):
                 article_div = Div(
                     text=f"""
-                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; background-color: #f9f9f9; width: 680px; box-sizing: border-box;">
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; 
+                        background-color: #f9f9f9; width: 680px; box-sizing: border-box;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
-                        <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(article["content"])}</div>
+                        <div style="white-space: pre-wrap; overflow-wrap: break-word;">
+                            {html.escape(article["content"])}
+                        </div>
                     </div>
                     """,
                     width=700,
