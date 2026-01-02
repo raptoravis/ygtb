@@ -7,7 +7,7 @@ from bokeh.application import Application
 from bokeh.application.handlers.function import FunctionHandler
 from bokeh.document import Document
 from bokeh.layouts import column, row
-from bokeh.models import Button, Div, TextAreaInput
+from bokeh.models import Button, Div, TabPanel, Tabs, TextAreaInput, TextInput
 from bokeh.server.server import Server
 from crewai import Agent, Crew, Process, Task
 from termcolor import colored
@@ -17,20 +17,23 @@ from utils import get_llm, glog_info
 ARTICLES_FILE = "data/articles.json"
 
 
-def load_articles():
+def load_styles():
     if os.path.exists(ARTICLES_FILE):
         with open(ARTICLES_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data.get("styles", [])
     return []
 
 
-def save_articles(articles):
+def save_styles(styles):
     os.makedirs(os.path.dirname(ARTICLES_FILE), exist_ok=True)
     with open(ARTICLES_FILE, "w", encoding="utf-8") as f:
-        json.dump(articles, f, ensure_ascii=False, indent=2)
+        json.dump({"styles": styles}, f, ensure_ascii=False, indent=2)
 
 
-def analyze_article_with_style(article_text, reference_articles, provider, model):
+def analyze_article_with_style(
+    article_text, reference_articles, style_name, style_description, provider, model
+):
     llm = get_llm(provider=provider, model=model)
     analyzer = Agent(
         role="文章风格分析师",
@@ -46,6 +49,9 @@ def analyze_article_with_style(article_text, reference_articles, provider, model
 
     task = Task(
         description=f"""参考以下文章的风格特点，用相同的风格重写目标文章。
+
+风格名称: {style_name}
+风格描述: {style_description}
 
 参考文章:
 {reference_text}
@@ -75,62 +81,175 @@ def analyze_article_with_style(article_text, reference_articles, provider, model
     return str(result)
 
 
-def make_document(doc: Document, provider, model):
-    articles = load_articles()
+class StyleTab:
+    def __init__(
+        self, style_data, styles_list, update_ui_callback, delete_style_callback
+    ):
+        self.style_data = style_data
+        self.styles_list = styles_list
+        self.update_ui_callback = update_ui_callback
+        self.delete_style_callback = delete_style_callback
 
-    article_input = TextAreaInput(
-        title="输入文章内容",
-        placeholder="在这里输入文章内容...",
-        value="",
-        rows=10,
-        width=800,
-    )
+        self.name_input = TextInput(
+            value=style_data.get("name", ""),
+            title="风格名称",
+            width=560,
+        )
 
-    add_button = Button(label="添加文章", button_type="success", width=150, height=50)
+        self.desc_input = TextAreaInput(
+            value=style_data.get("description", ""),
+            title="风格描述",
+            placeholder="描述这个风格的特点...",
+            rows=4,
+            width=680,
+        )
 
-    articles_div = Div(text="", width=800)
+        self.desc_input = TextAreaInput(
+            value=style_data.get("description", ""),
+            title="风格描述",
+            placeholder="描述这个风格的特点...",
+            rows=4,
+            width=700,
+        )
 
-    target_article_input = TextAreaInput(
-        title="输入需要风格转换的文章",
-        placeholder="在这里输入需要转换的文章...",
-        value="",
-        rows=10,
-        width=800,
-    )
+        self.article_input = TextAreaInput(
+            title="输入参考文章",
+            placeholder="在这里输入文章内容...",
+            value="",
+            rows=15,
+            width=700,
+        )
 
-    analyze_button = Button(
-        label="分析并重写", button_type="primary", width=150, height=50
-    )
+        self.add_article_button = Button(
+            label="添加文章", button_type="success", width=120, height=40
+        )
+        self.delete_style_button = Button(
+            label="删除风格", button_type="danger", width=120, height=40
+        )
 
-    result_div = Div(text="", width=800)
+        self.articles_div = Div(text="", width=700)
 
-    def update_articles_display():
+        self.add_article_button.on_click(self.add_article)
+        self.delete_style_button.on_click(self.delete_style)
+
+        self.update_articles_display()
+
+        self.panel = TabPanel(
+            child=column(
+                row(self.name_input, self.delete_style_button),
+                self.desc_input,
+                self.article_input,
+                row(self.add_article_button),
+                self.articles_div,
+            ),
+            title=style_data.get("name", "未命名风格"),
+        )
+
+    def update_articles_display(self):
+        articles = self.style_data.get("articles", [])
         if not articles:
-            articles_div.text = "<p>暂无已保存的文章</p>"
+            self.articles_div.text = "<p>暂无参考文章</p>"
         else:
-            html = "<h3>已保存的文章:</h3>"
+            html = "<h4>参考文章:</h4>"
             for i, article in enumerate(articles):
                 html += f"""
-                <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
-                    <p><strong>文章 {i + 1}</strong> (添加时间: {article.get("time", "N/A")})</p>
-                    <p>{article["content"][:200]}...</p>
-                    <button onclick="delete_article({i})">删除</button>
+                <div style="border: 1px solid #ddd; padding: 8px; margin: 5px 0; background-color: #f5f5f5;">
+                    <p><small>添加时间: {article.get("time", "N/A")}</small></p>
+                    <p>{article["content"]}...</p>
+                    <button onclick="delete_article({i})" style="background:#f44336;color:white;border:none;padding:5px 10px;cursor:pointer;">删除文章</button>
                 </div>
                 """
-            articles_div.text = html
+            self.articles_div.text = html
 
-    def add_article():
-        content = article_input.value.strip()
+    def add_article(self):
+        content = self.article_input.value.strip()
         if content:
-            articles.append(
+            if "articles" not in self.style_data:
+                self.style_data["articles"] = []
+            self.style_data["articles"].append(
                 {
                     "content": content,
                     "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 }
             )
-            save_articles(articles)
-            article_input.value = ""
-            update_articles_display()
+            save_styles(self.styles_list)
+            self.article_input.value = ""
+            self.update_articles_display()
+
+    def delete_style(self):
+        self.delete_style_callback(self.style_data)
+
+    def update_data(self):
+        self.style_data["name"] = self.name_input.value or "未命名风格"
+        self.style_data["description"] = self.desc_input.value or ""
+        self.update_ui_callback()
+
+
+def make_document(doc: Document, provider, model):
+    styles_list = load_styles()
+
+    add_style_button = Button(
+        label="添加新风格", button_type="primary", width=680, height=40
+    )
+
+    style_tabs = []
+    tabs_widget = Tabs(tabs=[])
+
+    def create_style_tabs():
+        nonlocal style_tabs
+        style_tabs = []
+
+        for style_data in styles_list:
+            style_tab = StyleTab(
+                style_data,
+                styles_list,
+                update_style_tabs,
+                delete_style,
+            )
+            style_tabs.append(style_tab)
+
+        return Tabs(tabs=[tab.panel for tab in style_tabs])
+
+    def update_style_tabs():
+        nonlocal tabs_widget
+        save_styles(styles_list)
+        new_tabs_widget = create_style_tabs()
+        left_column.children[1] = new_tabs_widget
+        tabs_widget = new_tabs_widget
+
+    def add_style():
+        new_style = {
+            "name": "新风格",
+            "description": "",
+            "articles": [],
+        }
+        styles_list.append(new_style)
+        save_styles(styles_list)
+        update_style_tabs()
+
+    def delete_style(style_data):
+        if style_data in styles_list:
+            styles_list.remove(style_data)
+            save_styles(styles_list)
+            update_style_tabs()
+
+    add_style_button.on_click(add_style)
+
+    target_article_input = TextAreaInput(
+        title="输入需要风格转换的文章",
+        placeholder="在这里输入需要转换的文章...",
+        value="",
+        rows=20,
+        width=700,
+    )
+
+    style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
+
+    analyze_button = Button(
+        label="分析并重写", button_type="primary", width=680, height=50
+    )
+
+    result_div = Div(text="", width=700)
 
     def analyze_and_rewrite():
         target_article = target_article_input.value.strip()
@@ -138,45 +257,71 @@ def make_document(doc: Document, provider, model):
             result_div.text = "<p style='color: red;'>请输入需要转换的文章</p>"
             return
 
+        current_tabs_widget = left_column.children[2]
+        if not style_tabs:
+            result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
+            return
+
+        if len(style_tabs) == 0:
+            result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
+            return
+
+        active_tab_idx = getattr(current_tabs_widget, "active", 0)
+        if active_tab_idx is None or active_tab_idx >= len(style_tabs):
+            result_div.text = "<p style='color: red;'>请先选择一个风格</p>"
+            return
+
+        active_style = style_tabs[active_tab_idx].style_data
+        articles = active_style.get("articles", [])
         if not articles:
-            result_div.text = "<p style='color: red;'>请先添加参考文章</p>"
+            result_div.text = "<p style='color: red;'>当前风格下没有参考文章</p>"
             return
 
         try:
+            style_tabs[active_tab_idx].update_data()
+            save_styles(styles_list)
+
             reference_articles = [a["content"] for a in articles]
+            style_name = active_style.get("name", "未命名风格")
+            style_description = active_style.get("description", "")
             result = analyze_article_with_style(
-                target_article, reference_articles, provider, model
+                target_article,
+                reference_articles,
+                style_name,
+                style_description,
+                provider,
+                model,
             )
             result_div.text = f"""
-            <h3>重写结果:</h3>
+            <h3>使用 "{style_name}" 风格重写结果:</h3>
             <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9;">
-                <p>{result}</p>
+                <p>{result.replace(chr(10), "<br>")}</p>
             </div>
             """
         except Exception as e:
             result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
 
-    add_button.on_click(add_article)
     analyze_button.on_click(analyze_and_rewrite)
 
-    update_articles_display()
+    initial_tabs = create_style_tabs()
+    tabs_widget = initial_tabs
 
     left_column = column(
-        Div(text="<h2>添加参考文章</h2>", width=400),
-        article_input,
-        row(add_button),
-        articles_div,
+        Div(text="<h2>风格管理</h2>", width=700),
+        add_style_button,
+        initial_tabs,
     )
 
     right_column = column(
-        Div(text="<h2>风格转换</h2>", width=400),
+        Div(text="<h2>风格转换</h2>", width=700),
+        style_select_div,
         target_article_input,
-        row(analyze_button),
+        analyze_button,
         result_div,
     )
 
     layout = column(
-        Div(text="<h1>文章风格分析与重写工具</h1>", width=800),
+        Div(text="<h1>文章风格分析与重写工具</h1>", width=1400),
         row(left_column, right_column),
     )
 
