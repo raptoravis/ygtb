@@ -40,7 +40,9 @@ def analyze_article_with_style(article_text, reference_articles, provider, model
         verbose=True,
     )
 
-    reference_text = "\n\n".join([f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)])
+    reference_text = "\n\n".join(
+        [f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)]
+    )
 
     task = Task(
         description=f"""参考以下文章的风格特点，用相同的风格重写目标文章。
@@ -96,7 +98,9 @@ def make_document(doc: Document, provider, model):
         width=800,
     )
 
-    analyze_button = Button(label="分析并重写", button_type="primary", width=150, height=50)
+    analyze_button = Button(
+        label="分析并重写", button_type="primary", width=150, height=50
+    )
 
     result_div = Div(text="", width=800)
 
@@ -140,7 +144,9 @@ def make_document(doc: Document, provider, model):
 
         try:
             reference_articles = [a["content"] for a in articles]
-            result = analyze_article_with_style(target_article, reference_articles, provider, model)
+            result = analyze_article_with_style(
+                target_article, reference_articles, provider, model
+            )
             result_div.text = f"""
             <h3>重写结果:</h3>
             <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9;">
@@ -155,16 +161,23 @@ def make_document(doc: Document, provider, model):
 
     update_articles_display()
 
-    layout = column(
-        Div(text="<h2>文章风格分析与重写工具</h2>", width=800),
+    left_column = column(
+        Div(text="<h2>添加参考文章</h2>", width=400),
         article_input,
         row(add_button),
         articles_div,
-        Div(text="<hr>", width=800),
-        Div(text="<h2>风格转换</h2>", width=800),
+    )
+
+    right_column = column(
+        Div(text="<h2>风格转换</h2>", width=400),
         target_article_input,
         row(analyze_button),
         result_div,
+    )
+
+    layout = column(
+        Div(text="<h1>文章风格分析与重写工具</h1>", width=800),
+        row(left_column, right_column),
     )
 
     doc.add_root(layout)
