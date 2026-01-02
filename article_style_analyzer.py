@@ -150,27 +150,6 @@ class StyleTab:
             ),
             title=style_data.get("name", "未命名风格"),
         )
-        self.delete_style_button = Button(
-            label="删除风格", button_type="danger", width=120, height=40
-        )
-
-        self.articles_div = Div(text="", width=700)
-
-        self.add_article_button.on_click(self.add_article)
-        self.delete_style_button.on_click(self.delete_style)
-
-        self.update_articles_display()
-
-        self.panel = TabPanel(
-            child=column(
-                row(self.name_input, self.delete_style_button),
-                self.desc_input,
-                self.article_input,
-                row(self.add_article_button),
-                self.articles_div,
-            ),
-            title=style_data.get("name", "未命名风格"),
-        )
 
     def update_articles_display(self):
         articles = self.style_data.get("articles", [])
@@ -251,7 +230,7 @@ def make_document(doc: Document, provider, model):
         nonlocal tabs_widget
         save_styles(styles_list)
         new_tabs_widget = create_style_tabs()
-        left_column.children[1] = new_tabs_widget
+        left_column.children[2] = new_tabs_widget
         tabs_widget = new_tabs_widget
 
     def add_style():
