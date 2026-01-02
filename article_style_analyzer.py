@@ -300,6 +300,53 @@ def make_document(doc: Document, provider, model):
 
     result_div = Div(text="", width=700)
 
+    # 添加复制按钮
+    copy_button = Button(label="复制结果", button_type="success", width=120, height=40, disabled=True)
+
+    def copy_to_clipboard():
+        """复制结果内容到剪贴板（只复制文本框内容）"""
+        # 直接使用JavaScript从DOM中提取文本框内容
+        copy_script = """
+        // 找到结果文本框
+        const resultDivs = document.querySelectorAll('div[style*="border: 1px solid #4CAF50"]');
+        if (resultDivs.length > 0) {
+            // 获取最内层的div内容
+            const innerDiv = resultDivs[0].querySelector('div[style*="white-space: pre-wrap"]');
+            if (innerDiv) {
+                const textToCopy = innerDiv.textContent || innerDiv.innerText;
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    console.log('复制成功');
+                }, function(err) {
+                    console.error('复制失败: ', err);
+                    // 如果clipboard API失败，使用备用方法
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                });
+            }
+        }
+        """
+
+        # 在Bokeh中执行JavaScript
+        from bokeh.models import CustomJS
+
+        copy_callback = CustomJS(args={}, code=copy_script)
+        copy_button.js_on_click(copy_callback)
+
+        # 显示复制成功提示
+        copy_button.label = "已复制"
+
+        # 2秒后恢复按钮状态
+        def reset_copy_button():
+            copy_button.label = "复制结果"
+
+        doc.add_timeout_callback(reset_copy_button, 2000)
+
+    copy_button.on_click(copy_to_clipboard)
+
     def analyze_and_rewrite():
         # 禁用按钮并显示分析中状态
         analyze_button.label = "分析中..."
@@ -354,6 +401,8 @@ def make_document(doc: Document, provider, model):
                     <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
                 </div>
                 """
+                # 启用复制按钮
+                copy_button.disabled = False
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
             finally:
@@ -381,6 +430,7 @@ def make_document(doc: Document, provider, model):
         style_select_div,
         target_article_input,
         analyze_button,
+        row(copy_button, width=700),
         result_div,
     )
 
