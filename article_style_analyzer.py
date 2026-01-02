@@ -31,9 +31,7 @@ def save_styles(styles):
         json.dump({"styles": styles}, f, ensure_ascii=False, indent=2)
 
 
-def analyze_article_with_style(
-    article_text, reference_articles, style_name, style_description, provider, model
-):
+def analyze_article_with_style(article_text, reference_articles, style_name, style_description, provider, model):
     llm = get_llm(provider=provider, model=model)
     analyzer = Agent(
         role="文章风格分析师",
@@ -43,9 +41,7 @@ def analyze_article_with_style(
         verbose=True,
     )
 
-    reference_text = "\n\n".join(
-        [f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)]
-    )
+    reference_text = "\n\n".join([f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)])
 
     task = Task(
         description=f"""参考以下文章的风格特点，用相同的风格重写目标文章。
@@ -82,9 +78,7 @@ def analyze_article_with_style(
 
 
 class StyleTab:
-    def __init__(
-        self, style_data, styles_list, update_ui_callback, delete_style_callback
-    ):
+    def __init__(self, style_data, styles_list, update_ui_callback, delete_style_callback):
         self.style_data = style_data
         self.styles_list = styles_list
         self.update_ui_callback = update_ui_callback
@@ -104,14 +98,6 @@ class StyleTab:
             width=680,
         )
 
-        self.desc_input = TextAreaInput(
-            value=style_data.get("description", ""),
-            title="风格描述",
-            placeholder="描述这个风格的特点...",
-            rows=4,
-            width=700,
-        )
-
         self.article_input = TextAreaInput(
             title="输入参考文章",
             placeholder="在这里输入文章内容...",
@@ -120,12 +106,8 @@ class StyleTab:
             width=700,
         )
 
-        self.add_article_button = Button(
-            label="添加文章", button_type="success", width=120, height=40
-        )
-        self.delete_style_button = Button(
-            label="删除风格", button_type="danger", width=120, height=40
-        )
+        self.add_article_button = Button(label="添加文章", button_type="success", width=120, height=40)
+        self.delete_style_button = Button(label="删除风格", button_type="danger", width=120, height=40)
 
         self.articles_preview_div = Div(text="", width=700)
 
@@ -134,9 +116,7 @@ class StyleTab:
 
         self.update_articles_display()
 
-        self.delete_article_button = Button(
-            label="删除选中的文章", button_type="danger", width=680, height=40
-        )
+        self.delete_article_button = Button(label="删除选中的文章", button_type="danger", width=680, height=40)
         self.delete_article_button.on_click(self.delete_article)
 
         self.panel = TabPanel(
@@ -150,6 +130,13 @@ class StyleTab:
             ),
             title=style_data.get("name", "未命名风格"),
         )
+
+        self.name_input.on_change("value", self.on_name_change)
+
+    def on_name_change(self, attr, old, new):
+        new_name = new.strip() or "未命名风格"
+        self.style_data["name"] = new_name
+        self.panel.title = new_name
 
     def update_articles_display(self):
         articles = self.style_data.get("articles", [])
@@ -196,17 +183,16 @@ class StyleTab:
         self.delete_style_callback(self.style_data)
 
     def update_data(self):
-        self.style_data["name"] = self.name_input.value or "未命名风格"
+        new_name = self.name_input.value or "未命名风格"
+        self.style_data["name"] = new_name
         self.style_data["description"] = self.desc_input.value or ""
-        self.update_ui_callback()
+        self.panel.title = new_name
 
 
 def make_document(doc: Document, provider, model):
     styles_list = load_styles()
 
-    add_style_button = Button(
-        label="添加新风格", button_type="primary", width=680, height=40
-    )
+    add_style_button = Button(label="添加新风格", button_type="primary", width=680, height=40)
 
     style_tabs = []
     tabs_widget = Tabs(tabs=[])
@@ -261,9 +247,7 @@ def make_document(doc: Document, provider, model):
 
     style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
 
-    analyze_button = Button(
-        label="分析并重写", button_type="primary", width=680, height=50
-    )
+    analyze_button = Button(label="分析并重写", button_type="primary", width=680, height=50)
 
     result_div = Div(text="", width=700)
 
