@@ -15,7 +15,10 @@ from termcolor import colored
 
 from utils import get_llm, glog_info
 
+HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".ygtb")
+
 ARTICLES_FILE = "data/articles.json"
+HISTORY_FILE = os.path.join(HOME_PATH, "data/history.json")
 
 
 def load_styles():
@@ -30,6 +33,44 @@ def save_styles(styles):
     os.makedirs(os.path.dirname(ARTICLES_FILE), exist_ok=True)
     with open(ARTICLES_FILE, "w", encoding="utf-8") as f:
         json.dump({"styles": styles}, f, ensure_ascii=False, indent=2)
+
+
+def load_history():
+    """加载历史记录"""
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("history", [])
+        except Exception:
+            return []
+    return []
+
+
+def save_history(history):
+    """保存历史记录"""
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump({"history": history}, f, ensure_ascii=False, indent=2)
+
+
+def add_history_entry(original_text, result_text, style_name):
+    """添加新的历史记录条目"""
+    history = load_history()
+
+    # 创建新的历史记录条目
+    entry = {
+        "id": len(history),
+        "original_text": original_text,
+        "result_text": result_text,
+        "style_name": style_name,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "date": datetime.now().strftime("%Y-%m-%d"),
+    }
+
+    history.append(entry)
+    save_history(history)
+    return entry
 
 
 def analyze_article_with_style(article_text, reference_articles, style_name, style_description, provider, model):
@@ -296,6 +337,18 @@ def make_document(doc: Document, provider, model):
 
     style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
 
+    # 历史记录相关组件
+    history_div = Div(text="<h3>历史记录</h3>", width=700)
+
+    # 历史记录下拉列表
+    history_select = Select(title="选择历史记录", value="", options=[], width=700)
+
+    # 恢复历史记录按钮
+    restore_history_button = Button(label="恢复选中记录", button_type="warning", width=150, height=40, disabled=True)
+
+    # 清除历史记录按钮
+    clear_history_button = Button(label="清除历史记录", button_type="danger", width=150, height=40)
+
     analyze_button = Button(label="分析并重写", button_type="primary", width=700, height=50)
 
     result_div = Div(text="", width=700)
@@ -380,6 +433,87 @@ def make_document(doc: Document, provider, model):
 
     copy_button.on_click(copy_to_clipboard)
 
+    def update_history_select():
+        """更新历史记录下拉列表"""
+        history = load_history()
+        options = [("", "选择历史记录")]
+
+        for entry in reversed(history):  # 最新的记录在前面
+            timestamp = entry.get("timestamp", "")
+            style_name = entry.get("style_name", "未命名风格")
+            preview = (
+                entry.get("original_text", "")[:50] + "..."
+                if len(entry.get("original_text", "")) > 50
+                else entry.get("original_text", "")
+            )
+
+            option_text = f"{timestamp} - {style_name}: {preview}"
+            options.append((str(entry["id"]), option_text))
+
+        history_select.options = options
+
+        # 如果没有历史记录，禁用恢复按钮
+        restore_history_button.disabled = len(history) == 0
+
+    def restore_selected_history():
+        """恢复选中的历史记录"""
+        selected_id = history_select.value
+        if selected_id:
+            history = load_history()
+            entry = next((e for e in history if str(e["id"]) == selected_id), None)
+
+            if entry:
+                # 恢复原文到输入框
+                target_article_input.value = entry["original_text"]
+
+                # 恢复结果到显示区域
+                style_name = entry.get("style_name", "未命名风格")
+                result_div.text = f"""
+                <h3>使用 "{style_name}" 风格重写结果:</h3>
+                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
+                    <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(entry["result_text"])}</div>
+                </div>
+                """
+
+                # 启用复制按钮
+                copy_button.disabled = False
+
+                # 显示恢复成功消息
+                def show_success():
+                    restore_history_button.label = "恢复成功"
+
+                    def reset_button():
+                        restore_history_button.label = "恢复选中记录"
+
+                    doc.add_timeout_callback(reset_button, 2000)
+
+                doc.add_next_tick_callback(show_success)
+
+    def clear_history():
+        """清除所有历史记录"""
+        save_history([])
+        update_history_select()
+        history_select.value = ""
+        clear_history_button.label = "已清除"
+
+        def reset_button():
+            clear_history_button.label = "清除历史记录"
+
+        doc.add_timeout_callback(reset_button, 2000)
+
+    # 绑定事件
+    restore_history_button.on_click(restore_selected_history)
+    clear_history_button.on_click(clear_history)
+
+    # 当下拉列表选择变化时启用/禁用恢复按钮
+    def on_history_select_change(attr, old, new):
+        restore_history_button.disabled = not bool(new)
+
+    history_select.on_change("value", on_history_select_change)
+
+    # 初始化历史记录下拉列表
+    update_history_select()
+
     def analyze_and_rewrite():
         # 禁用按钮并显示分析中状态
         analyze_button.label = "分析中..."
@@ -436,6 +570,10 @@ def make_document(doc: Document, provider, model):
                 """
                 # 启用复制按钮
                 copy_button.disabled = False
+
+                # 保存历史记录
+                add_history_entry(target_article, result, style_name)
+                update_history_select()
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
             finally:
@@ -465,6 +603,10 @@ def make_document(doc: Document, provider, model):
         analyze_button,
         row(copy_button, width=700),
         result_div,
+        # 历史记录部分
+        history_div,
+        history_select,
+        row(restore_history_button, clear_history_button),
     )
 
     layout = column(
