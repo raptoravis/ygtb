@@ -43,7 +43,9 @@ def get_llm(provider="antigravity", model=None):
     from crewai import LLM
 
     temperature = 0.3
-    if provider.lower() == "ollama":
+    provider = provider.lower()
+
+    if provider == "ollama":
         model = model or "codellama"
         glog_info(f"{provider} {model}")
 
@@ -52,11 +54,12 @@ def get_llm(provider="antigravity", model=None):
             base_url="http://localhost:11434",
             temperature=temperature,
         )
-    elif provider.lower() == "antigravity":
+    elif provider == "antigravity":
         if ANTIGRAVITY_API_KEY and ANTIGRAVITY_BASE_URL:
             model = model or "gemini-3-flash"
             glog_info(f"{provider} {model}")
             return LLM(
+                provider="openai",
                 model=model,
                 api_key=ANTIGRAVITY_API_KEY,
                 base_url=ANTIGRAVITY_BASE_URL,
@@ -64,8 +67,7 @@ def get_llm(provider="antigravity", model=None):
             )
         else:
             raise ValueError(
-                "Antigravity API credentials not found. "
-                "Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
+                "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL env var."
             )
     elif provider == "dashscope":
         if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
@@ -73,6 +75,7 @@ def get_llm(provider="antigravity", model=None):
             glog_info(f"{provider} {model}")
 
             return LLM(
+                provider="openai",
                 model=model,
                 api_key=DASHSCOPE_API_KEY,
                 base_url=DASHSCOPE_BASE_URL,
@@ -84,8 +87,9 @@ def get_llm(provider="antigravity", model=None):
         if OPENAI_API_KEY and OPENAI_BASE_URL:
             model = model or "gpt-4"
             return LLM(
+                provider="openai",
                 model=model,
-                api_key=OPENAI_API_KEY,  # type: ignore
+                api_key=OPENAI_API_KEY,
                 base_url=OPENAI_BASE_URL,
                 temperature=temperature,
             )
