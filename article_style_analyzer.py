@@ -309,31 +309,52 @@ def make_document(doc: Document, provider, model):
             # 从HTML中提取纯文本内容
             import re
 
-            import pyperclip
-
             result_text = ""
 
-            if result_div.text:
-                # 提取绿色边框div内的内容
-                div_match = re.search(
-                    r'<div[^>]*style="[^"]*border: 1px solid #4CAF50[^"]*"[^>]*>(.*?)</div>', result_div.text, re.DOTALL
-                )
-                if div_match:
-                    inner_content = div_match.group(1)
-                    # 提取内层div的内容
-                    inner_div_match = re.search(r"<div[^>]*>(.*?)</div>", inner_content, re.DOTALL)
-                    if inner_div_match:
-                        result_text = inner_div_match.group(1)
-                        # 去除HTML标签
-                        result_text = re.sub(r"<[^>]+>", "", result_text)
-                        # 去除HTML转义字符
-                        result_text = html.unescape(result_text)
-                        result_text = result_text.strip()
+            if result_div.text and "使用 " in result_div.text:
+                # 更简单的提取方法：直接查找包含实际内容的div
+                # 查找包含 "white-space: pre-wrap" 的div
+                pattern = r'white-space: pre-wrap; overflow-wrap: break-word;">([^<]*)</div>'
+                match = re.search(pattern, result_div.text)
+
+                if match:
+                    result_text = match.group(1)
+                    # 去除HTML转义字符
+                    result_text = html.unescape(result_text)
+                    result_text = result_text.strip()
+                else:
+                    # 备用方法：查找div标签内的文本内容
+                    # 查找所有div标签并提取文本内容
+                    div_pattern = r"<div[^>]*>([^<]*)</div>"
+                    matches = re.findall(div_pattern, result_div.text)
+                    for match in matches:
+                        if match.strip() and not match.startswith("使用 "):
+                            result_text = match.strip()
+                            result_text = html.unescape(result_text)
+                            break
 
             if result_text:
-                # 复制到剪贴板
-                pyperclip.copy(result_text)
-                copy_button.label = "已复制"
+                try:
+                    import pyperclip
+
+                    # 复制到剪贴板
+                    pyperclip.copy(result_text)
+                    copy_button.label = "已复制"
+                except ImportError:
+                    # 如果pyperclip不可用，使用备用方法
+                    import platform
+                    import subprocess
+
+                    # 根据操作系统使用不同的复制命令
+                    system = platform.system()
+                    if system == "Darwin":  # macOS
+                        subprocess.run("pbcopy", universal_newlines=True, input=result_text)
+                    elif system == "Windows":  # Windows
+                        subprocess.run("clip", universal_newlines=True, input=result_text)
+                    else:  # Linux
+                        subprocess.run("xclip", universal_newlines=True, input=result_text)
+
+                    copy_button.label = "已复制"
 
                 # 2秒后恢复按钮状态
                 def reset_copy_button():
@@ -343,57 +364,12 @@ def make_document(doc: Document, provider, model):
             else:
                 copy_button.label = "无内容"
 
+                # 2秒后恢复按钮状态
                 def reset_copy_button():
                     copy_button.label = "复制结果"
 
                 doc.add_timeout_callback(reset_copy_button, 2000)
 
-        except ImportError:
-            # 如果pyperclip不可用，使用备用方法
-            import platform
-
-            # 从HTML中提取文本
-            import re
-            import subprocess
-
-            result_text = ""
-
-            if result_div.text:
-                div_match = re.search(
-                    r'<div[^>]*style="[^"]*border: 1px solid #4CAF50[^"]*"[^>]*>(.*?)</div>', result_div.text, re.DOTALL
-                )
-                if div_match:
-                    inner_content = div_match.group(1)
-                    inner_div_match = re.search(r"<div[^>]*>(.*?)</div>", inner_content, re.DOTALL)
-                    if inner_div_match:
-                        result_text = inner_div_match.group(1)
-                        result_text = re.sub(r"<[^>]+>", "", result_text)
-                        result_text = html.unescape(result_text)
-                        result_text = result_text.strip()
-
-            if result_text:
-                # 根据操作系统使用不同的复制命令
-                system = platform.system()
-                if system == "Darwin":  # macOS
-                    subprocess.run("pbcopy", universal_newlines=True, input=result_text)
-                elif system == "Windows":  # Windows
-                    subprocess.run("clip", universal_newlines=True, input=result_text)
-                else:  # Linux
-                    subprocess.run("xclip", universal_newlines=True, input=result_text)
-
-                copy_button.label = "已复制"
-
-                def reset_copy_button():
-                    copy_button.label = "复制结果"
-
-                doc.add_timeout_callback(reset_copy_button, 2000)
-            else:
-                copy_button.label = "无内容"
-
-                def reset_copy_button():
-                    copy_button.label = "复制结果"
-
-                doc.add_timeout_callback(reset_copy_button, 2000)
         except Exception:
             copy_button.label = "复制失败"
 

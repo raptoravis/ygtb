@@ -21,6 +21,7 @@ dependencies = [
     "ddgs>=9.10.0",
     "polygon-api-client>=1.16.3",
     "crewai[tools]>=1.7.2",
+    "pyperclip>=1.11.0",
 ]
 
 [tool.ruff]
