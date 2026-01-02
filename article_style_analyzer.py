@@ -301,54 +301,69 @@ def make_document(doc: Document, provider, model):
     result_div = Div(text="", width=700)
 
     def analyze_and_rewrite():
-        target_article = target_article_input.value.strip()
-        if not target_article:
-            result_div.text = "<p style='color: red;'>请输入需要转换的文章</p>"
-            return
+        # 禁用按钮并显示分析中状态
+        analyze_button.label = "分析中..."
+        analyze_button.button_type = "default"
+        analyze_button.disabled = True
+        result_div.text = "<p style='color: blue;'>正在分析文章风格，请稍候...</p>"
 
-        current_tabs_widget = left_column.children[2]
-        if not style_tabs:
-            result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
-            return
+        def async_analysis():
+            try:
+                target_article = target_article_input.value.strip()
+                if not target_article:
+                    result_div.text = "<p style='color: red;'>请输入需要转换的文章</p>"
+                    return
 
-        if len(style_tabs) == 0:
-            result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
-            return
+                current_tabs_widget = left_column.children[2]
+                if not style_tabs:
+                    result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
+                    return
 
-        active_tab_idx = getattr(current_tabs_widget, "active", 0)
-        if active_tab_idx is None or active_tab_idx >= len(style_tabs):
-            result_div.text = "<p style='color: red;'>请先选择一个风格</p>"
-            return
+                if len(style_tabs) == 0:
+                    result_div.text = "<p style='color: red;'>请先创建一个风格</p>"
+                    return
 
-        active_style = style_tabs[active_tab_idx].style_data
-        articles = active_style.get("articles", [])
-        if not articles:
-            result_div.text = "<p style='color: red;'>当前风格下没有参考文章</p>"
-            return
+                active_tab_idx = getattr(current_tabs_widget, "active", 0)
+                if active_tab_idx is None or active_tab_idx >= len(style_tabs):
+                    result_div.text = "<p style='color: red;'>请先选择一个风格</p>"
+                    return
 
-        try:
-            style_tabs[active_tab_idx].update_data()
-            save_styles(styles_list)
+                active_style = style_tabs[active_tab_idx].style_data
+                articles = active_style.get("articles", [])
+                if not articles:
+                    result_div.text = "<p style='color: red;'>当前风格下没有参考文章</p>"
+                    return
 
-            reference_articles = [a["content"] for a in articles]
-            style_name = active_style.get("name", "未命名风格")
-            style_description = active_style.get("description", "")
-            result = analyze_article_with_style(
-                target_article,
-                reference_articles,
-                style_name,
-                style_description,
-                provider,
-                model,
-            )
-            result_div.text = f"""
-            <h3>使用 "{style_name}" 风格重写结果:</h3>
-            <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
-                <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
-            </div>
-            """
-        except Exception as e:
-            result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
+                style_tabs[active_tab_idx].update_data()
+                save_styles(styles_list)
+
+                reference_articles = [a["content"] for a in articles]
+                style_name = active_style.get("name", "未命名风格")
+                style_description = active_style.get("description", "")
+                result = analyze_article_with_style(
+                    target_article,
+                    reference_articles,
+                    style_name,
+                    style_description,
+                    provider,
+                    model,
+                )
+                result_div.text = f"""
+                <h3>使用 "{style_name}" 风格重写结果:</h3>
+                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
+                    <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
+                </div>
+                """
+            except Exception as e:
+                result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
+            finally:
+                # 恢复按钮状态
+                analyze_button.label = "分析并重写"
+                analyze_button.button_type = "primary"
+                analyze_button.disabled = False
+
+        # 使用异步执行避免阻塞UI
+        doc.add_next_tick_callback(async_analysis)
 
     analyze_button.on_click(analyze_and_rewrite)
 
