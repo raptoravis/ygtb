@@ -162,7 +162,7 @@ class StyleTab:
                 article_div = Div(
                     text=f"""
                     <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; 
-                        background-color: #f9f9f9; width: 680px; box-sizing: border-box;">
+                        background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
                         <div style="white-space: pre-wrap; overflow-wrap: break-word;">
                             {html.escape(article["content"])}
@@ -241,8 +241,11 @@ def make_document(doc: Document, provider, model):
 
     def update_style_tabs():
         nonlocal tabs_widget
+        current_active = tabs_widget.active
         save_styles(styles_list)
         new_tabs_widget = create_style_tabs()
+        if current_active is not None and current_active < len(new_tabs_widget.tabs):
+            new_tabs_widget.active = current_active
         left_column.children[2] = new_tabs_widget
         tabs_widget = new_tabs_widget
         update_style_select_options()
@@ -293,7 +296,7 @@ def make_document(doc: Document, provider, model):
 
     style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
 
-    analyze_button = Button(label="分析并重写", button_type="primary", width=680, height=50)
+    analyze_button = Button(label="分析并重写", button_type="primary", width=700, height=50)
 
     result_div = Div(text="", width=700)
 
@@ -340,7 +343,7 @@ def make_document(doc: Document, provider, model):
             )
             result_div.text = f"""
             <h3>使用 "{style_name}" 风格重写结果:</h3>
-            <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9;">
+            <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
                 <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
             </div>
             """
