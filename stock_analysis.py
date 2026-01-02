@@ -3,77 +3,16 @@ import os
 import time
 
 import pandas as pd
-from crewai import LLM, Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task
 from crewai.tools import tool
 from ddgs import DDGS
-from dotenv import load_dotenv
 from polygon import RESTClient
 from termcolor import colored
+from utils import get_llm, glog_info
 
-
-def glog_info(msg: str):
-    print(msg)
-
-
-HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".bbt")
-credentials_env_path = os.path.join(HOME_PATH, "credentials.env")
-load_dotenv(credentials_env_path, verbose=True)
-glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
-
-# 配置API KEY (这里用OpenAI，国内可用DeepSeek/Moonshot)
-# 添加Ollama支持
-
-DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
-DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
-
-ANTIGRAVITY_API_KEY = os.environ.get("ANTIGRAVITY_API_KEY")
-ANTIGRAVITY_BASE_URL = os.environ.get("ANTIGRAVITY_BASE_URL")
+)
 
 POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
-
-
-# Determine which LLM to use - using CrewAI's native LLM class
-def get_llm(provider="antigravity", model=None):
-    if provider.lower() == "ollama":
-        # Use Ollama with specified model
-        model = model or "codellama"
-        glog_info(f"{provider} {model}")
-
-        return LLM(
-            model=f"{model}",
-            base_url="http://localhost:11434",
-            temperature=0.3,
-        )
-    elif provider.lower() == "antigravity":
-        # Use Antigravity API
-        if ANTIGRAVITY_API_KEY and ANTIGRAVITY_BASE_URL:
-            model = model or "gemini-3-flash"
-            glog_info(f"{provider} {model}")
-            return LLM(
-                model=model,
-                api_key=ANTIGRAVITY_API_KEY,
-                base_url=ANTIGRAVITY_BASE_URL,
-                temperature=0.3,
-            )
-        else:
-            raise ValueError(
-                "Antigravity API credentials not found. "
-                "Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
-            )
-    else:
-        # Use Dashscope - LiteLLM has native support with dashscope/ prefix
-        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
-            model = model or "qwen3-coder-plus"
-            glog_info(f"{provider} {model}")
-
-            return LLM(
-                model=model,
-                api_key=DASHSCOPE_API_KEY,
-                base_url=DASHSCOPE_BASE_URL,
-                temperature=0.3,
-            )
-        else:
-            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.")
 
 
 polygon_client = RESTClient(api_key=POLYGON_API_KEY)
@@ -83,7 +22,9 @@ _stock_cache = {}
 
 def get_tickers(locale):
     # get exchanges
-    exchanges = pd.DataFrame(polygon_client.get_exchanges(asset_class="stocks", locale=locale))
+    exchanges = pd.DataFrame(
+        polygon_client.get_exchanges(asset_class="stocks", locale=locale)
+    )
 
     # exchanges MIC for use in list tickers
     # print(exchanges.mic)
@@ -96,7 +37,9 @@ def get_tickers(locale):
     usTickers = []
     for x in exchangeList:
         # page through response
-        for t in polygon_client.list_tickers(market="stocks", exchange=x, active=True, limit=1000):
+        for t in polygon_client.list_tickers(
+            market="stocks", exchange=x, active=True, limit=1000
+        ):
             # add to list
             usTickers.append(t.ticker)
         # print exchange when finished
@@ -217,7 +160,9 @@ task3 = Task(
 )
 
 parser = argparse.ArgumentParser(description="股票分析研报生成工具")
-parser.add_argument("-t", "--ticket", type=str, default="NVDA", help="股票代码，例如：NVDA, AAPL")
+parser.add_argument(
+    "-t", "--ticket", type=str, default="NVDA", help="股票代码，例如：NVDA, AAPL"
+)
 parser.add_argument(
     "--provider",
     type=str,

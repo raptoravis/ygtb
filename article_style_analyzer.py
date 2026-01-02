@@ -9,77 +9,12 @@ from bokeh.document import Document
 from bokeh.layouts import column, row
 from bokeh.models import Button, Div, TextAreaInput
 from bokeh.server.server import Server
-from crewai import LLM, Agent, Crew, Process, Task
-from dotenv import load_dotenv
+from crewai import Agent, Crew, Process, Task
 from termcolor import colored
 
+from utils import get_llm, glog_info
+
 ARTICLES_FILE = "data/articles.json"
-
-HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".bbt")
-credentials_env_path = os.path.join(HOME_PATH, "credentials.env")
-
-
-def glog_info(msg: str):
-    print(msg)
-
-
-load_dotenv(credentials_env_path, verbose=True)
-glog_info(colored(f"credentials_env_path: {credentials_env_path}"))
-
-# 配置API KEY (这里用OpenAI，国内可用DeepSeek/Moonshot)
-# 添加Ollama支持
-
-DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
-DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
-
-ANTIGRAVITY_API_KEY = os.environ.get("ANTIGRAVITY_API_KEY")
-ANTIGRAVITY_BASE_URL = os.environ.get("ANTIGRAVITY_BASE_URL")
-
-POLYGON_API_KEY = os.environ["POLYGON_API_KEY"]
-
-
-# Determine which LLM to use - using CrewAI's native LLM class
-def get_llm(provider="antigravity", model=None):
-    if provider.lower() == "ollama":
-        # Use Ollama with specified model
-        model = model or "codellama"
-        glog_info(f"{provider} {model}")
-
-        return LLM(
-            model=f"{model}",
-            base_url="http://localhost:11434",
-            temperature=0.3,
-        )
-    elif provider.lower() == "antigravity":
-        # Use Antigravity API
-        if ANTIGRAVITY_API_KEY and ANTIGRAVITY_BASE_URL:
-            model = model or "gemini-3-flash"
-            glog_info(f"{provider} {model}")
-            return LLM(
-                model=model,
-                api_key=ANTIGRAVITY_API_KEY,
-                base_url=ANTIGRAVITY_BASE_URL,
-                temperature=0.3,
-            )
-        else:
-            raise ValueError(
-                "Antigravity API credentials not found. "
-                "Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
-            )
-    else:
-        # Use Dashscope - LiteLLM has native support with dashscope/ prefix
-        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
-            model = model or "qwen3-coder-plus"
-            glog_info(f"{provider} {model}")
-
-            return LLM(
-                model=model,
-                api_key=DASHSCOPE_API_KEY,
-                base_url=DASHSCOPE_BASE_URL,
-                temperature=0.3,
-            )
-        else:
-            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.")
 
 
 def load_articles():
