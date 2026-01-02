@@ -1,4 +1,5 @@
 import argparse
+import html
 import json
 import os
 from datetime import datetime
@@ -103,6 +104,7 @@ class StyleTab:
             value="",
             rows=15,
             width=700,
+            max_length=10000000,
         )
 
         self.add_article_button = Button(label="添加文章", button_type="success", width=120, height=40)
@@ -156,7 +158,7 @@ class StyleTab:
                     text=f"""
                     <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; background-color: #f9f9f9;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
-                        <p>{article["content"]}</p>
+                        <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(article["content"])}</div>
                     </div>
                     """,
                     width=560,
@@ -278,6 +280,7 @@ def make_document(doc: Document, provider, model):
         value="",
         rows=20,
         width=700,
+        max_length=10000000,
     )
 
     style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
@@ -330,7 +333,7 @@ def make_document(doc: Document, provider, model):
             result_div.text = f"""
             <h3>使用 "{style_name}" 风格重写结果:</h3>
             <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9;">
-                <p>{result.replace(chr(10), "<br>")}</p>
+                <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
             </div>
             """
         except Exception as e:
