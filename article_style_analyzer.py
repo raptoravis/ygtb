@@ -304,46 +304,103 @@ def make_document(doc: Document, provider, model):
     copy_button = Button(label="复制结果", button_type="success", width=120, height=40, disabled=True)
 
     def copy_to_clipboard():
-        """复制结果内容到剪贴板（只复制文本框内容）"""
-        # 直接使用JavaScript从DOM中提取文本框内容
-        copy_script = """
-        // 找到结果文本框
-        const resultDivs = document.querySelectorAll('div[style*="border: 1px solid #4CAF50"]');
-        if (resultDivs.length > 0) {
-            // 获取最内层的div内容
-            const innerDiv = resultDivs[0].querySelector('div[style*="white-space: pre-wrap"]');
-            if (innerDiv) {
-                const textToCopy = innerDiv.textContent || innerDiv.innerText;
-                navigator.clipboard.writeText(textToCopy).then(function() {
-                    console.log('复制成功');
-                }, function(err) {
-                    console.error('复制失败: ', err);
-                    // 如果clipboard API失败，使用备用方法
-                    const textArea = document.createElement('textarea');
-                    textArea.value = textToCopy;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                });
-            }
-        }
-        """
+        """使用Python复制文本到剪贴板"""
+        try:
+            # 从HTML中提取纯文本内容
+            import re
 
-        # 在Bokeh中执行JavaScript
-        from bokeh.models import CustomJS
+            import pyperclip
 
-        copy_callback = CustomJS(args={}, code=copy_script)
-        copy_button.js_on_click(copy_callback)
+            result_text = ""
 
-        # 显示复制成功提示
-        copy_button.label = "已复制"
+            if result_div.text:
+                # 提取绿色边框div内的内容
+                div_match = re.search(
+                    r'<div[^>]*style="[^"]*border: 1px solid #4CAF50[^"]*"[^>]*>(.*?)</div>', result_div.text, re.DOTALL
+                )
+                if div_match:
+                    inner_content = div_match.group(1)
+                    # 提取内层div的内容
+                    inner_div_match = re.search(r"<div[^>]*>(.*?)</div>", inner_content, re.DOTALL)
+                    if inner_div_match:
+                        result_text = inner_div_match.group(1)
+                        # 去除HTML标签
+                        result_text = re.sub(r"<[^>]+>", "", result_text)
+                        # 去除HTML转义字符
+                        result_text = html.unescape(result_text)
+                        result_text = result_text.strip()
 
-        # 2秒后恢复按钮状态
-        def reset_copy_button():
-            copy_button.label = "复制结果"
+            if result_text:
+                # 复制到剪贴板
+                pyperclip.copy(result_text)
+                copy_button.label = "已复制"
 
-        doc.add_timeout_callback(reset_copy_button, 2000)
+                # 2秒后恢复按钮状态
+                def reset_copy_button():
+                    copy_button.label = "复制结果"
+
+                doc.add_timeout_callback(reset_copy_button, 2000)
+            else:
+                copy_button.label = "无内容"
+
+                def reset_copy_button():
+                    copy_button.label = "复制结果"
+
+                doc.add_timeout_callback(reset_copy_button, 2000)
+
+        except ImportError:
+            # 如果pyperclip不可用，使用备用方法
+            import platform
+
+            # 从HTML中提取文本
+            import re
+            import subprocess
+
+            result_text = ""
+
+            if result_div.text:
+                div_match = re.search(
+                    r'<div[^>]*style="[^"]*border: 1px solid #4CAF50[^"]*"[^>]*>(.*?)</div>', result_div.text, re.DOTALL
+                )
+                if div_match:
+                    inner_content = div_match.group(1)
+                    inner_div_match = re.search(r"<div[^>]*>(.*?)</div>", inner_content, re.DOTALL)
+                    if inner_div_match:
+                        result_text = inner_div_match.group(1)
+                        result_text = re.sub(r"<[^>]+>", "", result_text)
+                        result_text = html.unescape(result_text)
+                        result_text = result_text.strip()
+
+            if result_text:
+                # 根据操作系统使用不同的复制命令
+                system = platform.system()
+                if system == "Darwin":  # macOS
+                    subprocess.run("pbcopy", universal_newlines=True, input=result_text)
+                elif system == "Windows":  # Windows
+                    subprocess.run("clip", universal_newlines=True, input=result_text)
+                else:  # Linux
+                    subprocess.run("xclip", universal_newlines=True, input=result_text)
+
+                copy_button.label = "已复制"
+
+                def reset_copy_button():
+                    copy_button.label = "复制结果"
+
+                doc.add_timeout_callback(reset_copy_button, 2000)
+            else:
+                copy_button.label = "无内容"
+
+                def reset_copy_button():
+                    copy_button.label = "复制结果"
+
+                doc.add_timeout_callback(reset_copy_button, 2000)
+        except Exception:
+            copy_button.label = "复制失败"
+
+            def reset_copy_button():
+                copy_button.label = "复制结果"
+
+            doc.add_timeout_callback(reset_copy_button, 2000)
 
     copy_button.on_click(copy_to_clipboard)
 
