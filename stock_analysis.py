@@ -57,7 +57,8 @@ def get_llm(provider="antigravity", model=None):
             )
         else:
             raise ValueError(
-                "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
+                "Antigravity API credentials not found. "
+                "Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL and ANTIGRAVITY_MODEL env var."
             )
     else:
         # Use Dashscope - LiteLLM has native support with dashscope/ prefix
