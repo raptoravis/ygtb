@@ -87,7 +87,7 @@ class StyleTab:
         self.name_input = TextInput(
             value=style_data.get("name", ""),
             title="风格名称",
-            width=560,
+            width=700,
         )
 
         self.desc_input = TextAreaInput(
@@ -95,7 +95,7 @@ class StyleTab:
             title="风格描述",
             placeholder="描述这个风格的特点...",
             rows=4,
-            width=680,
+            width=700,
         )
 
         self.article_input = TextAreaInput(
