@@ -17,6 +17,9 @@ ANTIGRAVITY_BASE_URL = os.environ.get("ANTIGRAVITY_BASE_URL")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
+CUSTOMAI_API_KEY = os.environ.get("CUSTOMAI_API_KEY")
+CUSTOMAI_BASE_URL = os.environ.get("CUSTOMAI_BASE_URL")
+
 
 def glog_info(msg: str):
     print(msg)
@@ -39,9 +42,7 @@ def get_serper_api_key():
     return api_key
 
 
-def get_llm(provider="antigravity", model=None):
-    from crewai import LLM
-
+def get_llm_params(provider: str, model: str) -> dict:
     temperature = 0.3
     provider = provider.lower()
 
@@ -56,7 +57,7 @@ def get_llm(provider="antigravity", model=None):
             "model": "gemini-3-flash",
             "api_key": ANTIGRAVITY_API_KEY,
             "base_url": ANTIGRAVITY_BASE_URL,
-            "error_msg": "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL",
+            "error_msg": "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY/ANTIGRAVITY_BASE_URL",
         },
         "dashscope": {
             "provider": "openai",
@@ -71,6 +72,13 @@ def get_llm(provider="antigravity", model=None):
             "api_key": OPENAI_API_KEY,
             "base_url": OPENAI_BASE_URL,
             "error_msg": "OpenAI API credentials not found. Please set OPENAI_API_KEY env var.",
+        },
+        "customai": {
+            "provider": "openai",
+            "model": "kuaishou/kat-coder-pro-v1-free",
+            "api_key": CUSTOMAI_API_KEY,
+            "base_url": CUSTOMAI_BASE_URL,
+            "error_msg": "OpenAI API credentials not found. Please set CUSTOMAI_API_KEY/CUSTOMAI_BASE_URL env var.",
         },
     }
 
@@ -97,6 +105,13 @@ def get_llm(provider="antigravity", model=None):
     else:
         pass
 
+    return llm_params
+
+
+def get_llm(provider: str, model: str):
+    from crewai import LLM
+
+    llm_params = get_llm_params(provider=provider, model=model)
     return LLM(**llm_params)
 
 
