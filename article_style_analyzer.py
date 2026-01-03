@@ -153,13 +153,10 @@ def analyze_article_with_style(article_text, style_description, style_name, prov
 
 
 class StyleTab:
-    def __init__(self, style_data, styles_list, update_ui_callback, doc, provider, model):
+    def __init__(self, style_data, styles_list, update_ui_callback):
         self.style_data = style_data
         self.styles_list = styles_list
         self.update_ui_callback = update_ui_callback
-        self.doc = doc
-        self.provider = provider
-        self.model = model
 
         self.name_input = TextInput(
             value=style_data.get("name", ""),
@@ -171,7 +168,7 @@ class StyleTab:
             value=style_data.get("description", ""),
             title="风格描述",
             placeholder="描述这个风格的特点...",
-            rows=4,
+            rows=8,
             width=700,
         )
 
@@ -179,7 +176,7 @@ class StyleTab:
             title="输入参考文章",
             placeholder="在这里输入文章内容...",
             value="",
-            rows=15,
+            rows=10,
             width=700,
             max_length=10000000,
         )
@@ -189,11 +186,8 @@ class StyleTab:
         self.article_select = Select(title="选择要删除的文章", value="", options=[], width=200)
         self.delete_article_button = Button(label="删除选中文章", button_type="danger", width=120, height=40)
 
-        self.generate_style_button = Button(label="生成风格", button_type="primary", width=120, height=40)
-
         self.add_article_button.on_click(self.add_article)
         self.delete_article_button.on_click(self.delete_selected_article)
-        self.generate_style_button.on_click(self.generate_style)
 
         self.articles_preview_div = column(children=[])
         self.update_articles_display()
@@ -207,7 +201,6 @@ class StyleTab:
                     self.add_article_button,
                     self.article_select,
                     self.delete_article_button,
-                    self.generate_style_button,
                 ),
                 self.articles_preview_div,
             ),
@@ -298,54 +291,6 @@ class StyleTab:
         self.style_data["description"] = self.desc_input.value or ""
         self.panel.title = new_name
 
-    def generate_style(self):
-        articles = self.style_data.get("articles", [])
-        if not articles:
-            self.desc_input.value = "错误：没有参考文章，请先添加参考文章"
-            return
-
-        style_name = self.style_data.get("name", "未命名风格")
-        reference_articles = [a["content"] for a in articles]
-
-        self.generate_style_button.label = "生成中..."
-        self.generate_style_button.button_type = "default"
-        self.generate_style_button.disabled = True
-
-        def update_ui(result=None, error=None):
-            if error:
-                self.desc_input.value = f"生成失败: {error}"
-            elif result is not None:
-                self.style_data["description"] = result
-                self.desc_input.value = result
-                save_styles(self.styles_list)
-            self.generate_style_button.label = "生成风格"
-            self.generate_style_button.button_type = "primary"
-            self.generate_style_button.disabled = False
-
-        from concurrent.futures import ThreadPoolExecutor
-
-        executor = ThreadPoolExecutor(max_workers=1)
-
-        def background_task():
-            try:
-                result = generate_style_description_from_articles(
-                    reference_articles, style_name, self.provider, self.model
-                )
-
-                def callback_success():
-                    update_ui(result=result, error=None)
-
-                self.doc.add_next_tick_callback(callback_success)
-            except Exception as e:
-                error_msg = str(e)
-
-                def callback_error():
-                    update_ui(result=None, error=error_msg)
-
-                self.doc.add_next_tick_callback(callback_error)
-
-        executor.submit(background_task)
-
 
 def make_document(doc: Document, provider, model):
     styles_list = load_styles()
@@ -367,9 +312,6 @@ def make_document(doc: Document, provider, model):
                 style_data,
                 styles_list,
                 update_style_tabs,
-                doc,
-                provider,
-                model,
             )
             style_tabs.append(style_tab)
 
@@ -682,7 +624,7 @@ def make_document(doc: Document, provider, model):
     initial_tabs = create_style_tabs()
     tabs_widget = initial_tabs
 
-    generate_style_button = Button(label="生成风格", button_type="success", width=150, height=40)
+    generate_style_button = Button(label="生成风格描述", button_type="success", width=150, height=40)
 
     def generate_selected_style():
         current_tabs_widget = left_column.children[2]
