@@ -73,12 +73,12 @@ def add_history_entry(original_text, result_text, style_name):
     return entry
 
 
-def analyze_article_with_style(article_text, reference_articles, style_name, style_description, provider, model):
+def generate_style_description_from_articles(reference_articles, style_name, provider, model):
     llm = get_llm(provider=provider, model=model)
     analyzer = Agent(
         role="文章风格分析师",
-        goal="分析参考文章的风格并用这种风格重写目标文章",
-        backstory="你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点。",
+        goal="分析参考文章的风格并生成详细的风格描述",
+        backstory="你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，并用简洁准确的语言描述这些风格特点。",
         llm=llm,
         verbose=True,
     )
@@ -86,24 +86,57 @@ def analyze_article_with_style(article_text, reference_articles, style_name, sty
     reference_text = "\n\n".join([f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)])
 
     task = Task(
-        description=f"""参考以下文章的风格特点，用相同的风格重写目标文章。
+        description=f"""分析以下参考文章的风格特点，生成一个详细的风格描述。
 
 风格名称: {style_name}
-风格描述: {style_description}
 
 参考文章:
 {reference_text}
 
+请分析参考文章的以下方面，并生成一个清晰、详细的风格描述：
+1. 写作风格（正式/随意/学术/文学等）
+2. 语言特点（用词习惯、句式结构、修辞手法等）
+3. 情感基调（严肃/轻松/热情/客观等）
+4. 文章结构（开头/正文/结尾的组织方式）
+5. 特殊的表达习惯或写作手法
+
+请将以上分析整合成一个连贯、详细的风格描述，这个描述将用于指导AI以相同的风格重写其他文章。
+描述应该具体、准确，足以让AI理解和模仿这种写作风格。
+""",
+        agent=analyzer,
+        expected_output="详细的风格描述",
+    )
+
+    crew = Crew(
+        agents=[analyzer],
+        tasks=[task],
+        process=Process.sequential,
+    )
+
+    result = crew.kickoff()
+    return str(result)
+
+
+def analyze_article_with_style(article_text, style_description, style_name, provider, model):
+    llm = get_llm(provider=provider, model=model)
+    analyzer = Agent(
+        role="文章风格分析师",
+        goal="根据风格描述用这种风格重写目标文章",
+        backstory="你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。",
+        llm=llm,
+        verbose=True,
+    )
+
+    task = Task(
+        description=f"""根据以下风格描述，用这种风格重写目标文章。
+
+风格名称: {style_name}
+风格描述: {style_description}
+
 目标文章:
 {article_text}
 
-请分析参考文章的：
-1. 写作风格（正式/随意/学术/文学等）
-2. 语言特点（用词习惯、句式结构）
-3. 情感基调（严肃/轻松/热情/客观等）
-4. 文章结构（开头/正文/结尾的组织方式）
-
-然后用这种风格重写目标文章，保持原文的核心内容不变。
+请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。
 """,
         agent=analyzer,
         expected_output="重写后的文章内容",
@@ -120,10 +153,13 @@ def analyze_article_with_style(article_text, reference_articles, style_name, sty
 
 
 class StyleTab:
-    def __init__(self, style_data, styles_list, update_ui_callback):
+    def __init__(self, style_data, styles_list, update_ui_callback, doc, provider, model):
         self.style_data = style_data
         self.styles_list = styles_list
         self.update_ui_callback = update_ui_callback
+        self.doc = doc
+        self.provider = provider
+        self.model = model
 
         self.name_input = TextInput(
             value=style_data.get("name", ""),
@@ -153,8 +189,11 @@ class StyleTab:
         self.article_select = Select(title="选择要删除的文章", value="", options=[], width=200)
         self.delete_article_button = Button(label="删除选中文章", button_type="danger", width=120, height=40)
 
+        self.generate_style_button = Button(label="生成风格", button_type="primary", width=120, height=40)
+
         self.add_article_button.on_click(self.add_article)
         self.delete_article_button.on_click(self.delete_selected_article)
+        self.generate_style_button.on_click(self.generate_style)
 
         self.articles_preview_div = column(children=[])
         self.update_articles_display()
@@ -164,7 +203,12 @@ class StyleTab:
                 row(self.name_input),
                 self.desc_input,
                 self.article_input,
-                row(self.add_article_button, self.article_select, self.delete_article_button),
+                row(
+                    self.add_article_button,
+                    self.article_select,
+                    self.delete_article_button,
+                    self.generate_style_button,
+                ),
                 self.articles_preview_div,
             ),
             title=style_data.get("name", "未命名风格"),
@@ -202,7 +246,7 @@ class StyleTab:
             for i, article in enumerate(articles):
                 article_div = Div(
                     text=f"""
-                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; 
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;
                         background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
                         <div style="white-space: pre-wrap; overflow-wrap: break-word;">
@@ -254,6 +298,54 @@ class StyleTab:
         self.style_data["description"] = self.desc_input.value or ""
         self.panel.title = new_name
 
+    def generate_style(self):
+        articles = self.style_data.get("articles", [])
+        if not articles:
+            self.desc_input.value = "错误：没有参考文章，请先添加参考文章"
+            return
+
+        style_name = self.style_data.get("name", "未命名风格")
+        reference_articles = [a["content"] for a in articles]
+
+        self.generate_style_button.label = "生成中..."
+        self.generate_style_button.button_type = "default"
+        self.generate_style_button.disabled = True
+
+        def update_ui(result=None, error=None):
+            if error:
+                self.desc_input.value = f"生成失败: {error}"
+            elif result is not None:
+                self.style_data["description"] = result
+                self.desc_input.value = result
+                save_styles(self.styles_list)
+            self.generate_style_button.label = "生成风格"
+            self.generate_style_button.button_type = "primary"
+            self.generate_style_button.disabled = False
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        def background_task():
+            try:
+                result = generate_style_description_from_articles(
+                    reference_articles, style_name, self.provider, self.model
+                )
+
+                def callback_success():
+                    update_ui(result=result, error=None)
+
+                self.doc.add_next_tick_callback(callback_success)
+            except Exception as e:
+                error_msg = str(e)
+
+                def callback_error():
+                    update_ui(result=None, error=error_msg)
+
+                self.doc.add_next_tick_callback(callback_error)
+
+        executor.submit(background_task)
+
 
 def make_document(doc: Document, provider, model):
     styles_list = load_styles()
@@ -275,6 +367,9 @@ def make_document(doc: Document, provider, model):
                 style_data,
                 styles_list,
                 update_style_tabs,
+                doc,
+                provider,
+                model,
             )
             style_tabs.append(style_tab)
 
@@ -349,7 +444,7 @@ def make_document(doc: Document, provider, model):
     # 清除历史记录按钮
     clear_history_button = Button(label="清除历史记录", button_type="danger", width=150, height=40)
 
-    analyze_button = Button(label="分析并重写", button_type="primary", width=700, height=50)
+    analyze_button = Button(label="重写", button_type="primary", width=700, height=50)
 
     result_div = Div(text="", width=700)
 
@@ -516,10 +611,10 @@ def make_document(doc: Document, provider, model):
 
     def analyze_and_rewrite():
         # 禁用按钮并显示分析中状态
-        analyze_button.label = "分析中..."
+        analyze_button.label = "重写中..."
         analyze_button.button_type = "default"
         analyze_button.disabled = True
-        result_div.text = "<p style='color: blue;'>正在分析文章风格，请稍候...</p>"
+        result_div.text = "<p style='color: blue;'>正在重写文章，请稍候...</p>"
 
         def async_analysis():
             try:
@@ -543,22 +638,19 @@ def make_document(doc: Document, provider, model):
                     return
 
                 active_style = style_tabs[active_tab_idx].style_data
-                articles = active_style.get("articles", [])
-                if not articles:
-                    result_div.text = "<p style='color: red;'>当前风格下没有参考文章</p>"
+                style_description = active_style.get("description", "")
+                if not style_description:
+                    result_div.text = "<p style='color: red;'>请先生成风格描述</p>"
                     return
 
                 style_tabs[active_tab_idx].update_data()
                 save_styles(styles_list)
 
-                reference_articles = [a["content"] for a in articles]
                 style_name = active_style.get("name", "未命名风格")
-                style_description = active_style.get("description", "")
                 result = analyze_article_with_style(
                     target_article,
-                    reference_articles,
-                    style_name,
                     style_description,
+                    style_name,
                     provider,
                     model,
                 )
@@ -575,10 +667,10 @@ def make_document(doc: Document, provider, model):
                 add_history_entry(target_article, result, style_name)
                 update_history_select()
             except Exception as e:
-                result_div.text = f"<p style='color: red;'>分析出错: {str(e)}</p>"
+                result_div.text = f"<p style='color: red;'>重写出错: {str(e)}</p>"
             finally:
                 # 恢复按钮状态
-                analyze_button.label = "分析并重写"
+                analyze_button.label = "重写"
                 analyze_button.button_type = "primary"
                 analyze_button.disabled = False
 
@@ -590,9 +682,74 @@ def make_document(doc: Document, provider, model):
     initial_tabs = create_style_tabs()
     tabs_widget = initial_tabs
 
+    generate_style_button = Button(label="生成风格", button_type="success", width=150, height=40)
+
+    def generate_selected_style():
+        current_tabs_widget = left_column.children[2]
+        if not style_tabs:
+            return
+
+        active_tab_idx = getattr(current_tabs_widget, "active", 0)
+        if active_tab_idx is None or active_tab_idx >= len(style_tabs):
+            return
+
+        active_tab = style_tabs[active_tab_idx]
+        articles = active_tab.style_data.get("articles", [])
+        if not articles:
+            active_tab.desc_input.value = "错误：没有参考文章，请先添加参考文章"
+            return
+
+        style_name = active_tab.style_data.get("name", "未命名风格")
+        reference_articles = [a["content"] for a in articles]
+
+        generate_style_button.label = "生成中..."
+        generate_style_button.button_type = "default"
+        generate_style_button.disabled = True
+
+        def update_ui(result=None, error=None):
+            if error:
+                current_tabs_widget = left_column.children[2]
+                active_tab_idx = getattr(current_tabs_widget, "active", 0)
+                if active_tab_idx is not None and active_tab_idx < len(style_tabs):
+                    style_tabs[active_tab_idx].desc_input.value = f"生成失败: {error}"
+            elif result is not None:
+                current_tabs_widget = left_column.children[2]
+                active_tab_idx = getattr(current_tabs_widget, "active", 0)
+                if active_tab_idx is not None and active_tab_idx < len(style_tabs):
+                    style_tabs[active_tab_idx].style_data["description"] = result
+                    style_tabs[active_tab_idx].desc_input.value = result
+                    save_styles(styles_list)
+            generate_style_button.label = "生成风格"
+            generate_style_button.button_type = "success"
+            generate_style_button.disabled = False
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        def background_task():
+            try:
+                result = generate_style_description_from_articles(reference_articles, style_name, provider, model)
+
+                def callback_success():
+                    update_ui(result=result, error=None)
+
+                doc.add_next_tick_callback(callback_success)
+            except Exception as e:
+                error_msg = str(e)
+
+                def callback_error():
+                    update_ui(result=None, error=error_msg)
+
+                doc.add_next_tick_callback(callback_error)
+
+        executor.submit(background_task)
+
+    generate_style_button.on_click(generate_selected_style)
+
     left_column = column(
         Div(text="<h2>风格管理</h2>", width=700),
-        row(add_style_button, style_select, delete_style_button),
+        row(add_style_button, style_select, delete_style_button, generate_style_button),
         initial_tabs,
     )
 
