@@ -117,7 +117,14 @@ def generate_style_description_from_articles(reference_articles, style_name, pro
     return str(result)
 
 
-def analyze_article_with_style(article_text, style_description, style_name, provider, model):
+def analyze_article_with_style(
+    article_text,
+    style_description,
+    style_name,
+    additional_instructions,
+    provider,
+    model,
+):
     llm = get_llm(provider=provider, model=model)
     analyzer = Agent(
         role="文章风格分析师",
@@ -127,11 +134,13 @@ def analyze_article_with_style(article_text, style_description, style_name, prov
         verbose=True,
     )
 
+    instructions_part = f"\n\n额外指令:\n{additional_instructions}" if additional_instructions else ""
     task = Task(
         description=f"""根据以下风格描述，用这种风格重写目标文章。
 
 风格名称: {style_name}
 风格描述: {style_description}
+{instructions_part}
 
 目标文章:
 {article_text}
@@ -409,6 +418,14 @@ def make_document(doc: Document, provider, model):
 
     analyze_button = Button(label="重写", button_type="primary", height=50, sizing_mode="stretch_width")
 
+    additional_instructions_input = TextAreaInput(
+        title="额外指令（可选）",
+        placeholder="输入额外的指令，例如：让文章更简洁、增加幽默感、使用更正式的语气等...",
+        value="",
+        rows=3,
+        sizing_mode="stretch_width",
+    )
+
     result_div = Div(text="", sizing_mode="stretch_width")
 
     # 添加复制按钮
@@ -616,10 +633,12 @@ def make_document(doc: Document, provider, model):
                 save_styles(styles_list)
 
                 style_name = active_style.get("name", "未命名风格")
+                additional_instructions = additional_instructions_input.value.strip()
                 result = analyze_article_with_style(
                     target_article,
                     style_description,
                     style_name,
+                    additional_instructions,
                     provider,
                     model,
                 )
@@ -728,6 +747,7 @@ def make_document(doc: Document, provider, model):
         style_select_div,
         target_article_input,
         analyze_button,
+        additional_instructions_input,
         row(copy_button),
         result_div,
         # 历史记录部分
