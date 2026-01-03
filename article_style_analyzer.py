@@ -161,7 +161,7 @@ class StyleTab:
         self.name_input = TextInput(
             value=style_data.get("name", ""),
             title="风格名称",
-            width=700,
+            sizing_mode="stretch_width",
         )
 
         self.desc_input = TextAreaInput(
@@ -169,7 +169,7 @@ class StyleTab:
             title="风格描述",
             placeholder="描述这个风格的特点...",
             rows=8,
-            width=700,
+            sizing_mode="stretch_width",
         )
 
         self.article_input = TextAreaInput(
@@ -177,24 +177,24 @@ class StyleTab:
             placeholder="在这里输入文章内容...",
             value="",
             rows=10,
-            width=700,
+            sizing_mode="stretch_width",
             max_length=10000000,
         )
 
-        self.add_article_button = Button(label="添加文章", button_type="success", width=120, height=40)
+        self.add_article_button = Button(label="添加文章", button_type="success", height=40)
 
-        self.article_select = Select(title="选择要删除的文章", value="", options=[], width=200)
-        self.delete_article_button = Button(label="删除选中文章", button_type="danger", width=120, height=40)
+        self.article_select = Select(title="选择要删除的文章", value="", options=[], sizing_mode="stretch_width")
+        self.delete_article_button = Button(label="删除选中文章", button_type="danger", height=40)
 
         self.add_article_button.on_click(self.add_article)
         self.delete_article_button.on_click(self.delete_selected_article)
 
-        self.articles_preview_div = column(children=[])
+        self.articles_preview_div = column(children=[], sizing_mode="stretch_width")
         self.update_articles_display()
 
         self.panel = TabPanel(
             child=column(
-                row(self.name_input),
+                row(self.name_input, sizing_mode="stretch_width"),
                 self.desc_input,
                 self.article_input,
                 row(
@@ -240,14 +240,14 @@ class StyleTab:
                 article_div = Div(
                     text=f"""
                     <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;
-                        background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
+                        background-color: #f9f9f9; box-sizing: border-box;">
                         <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
                         <div style="white-space: pre-wrap; overflow-wrap: break-word;">
                             {html.escape(article["content"])}
                         </div>
                     </div>
                     """,
-                    width=700,
+                    sizing_mode="stretch_width",
                 )
                 children.append(article_div)
 
@@ -295,10 +295,20 @@ class StyleTab:
 def make_document(doc: Document, provider, model):
     styles_list = load_styles()
 
-    add_style_button = Button(label="添加新风格", button_type="primary", width=150, height=40)
+    add_style_button = Button(
+        label="添加新风格",
+        button_type="primary",
+        height=40,
+        sizing_mode="stretch_width",
+    )
 
-    style_select = Select(title="选择要删除的风格", value="", options=[], width=200)
-    delete_style_button = Button(label="删除选中风格", button_type="danger", width=150, height=40)
+    style_select = Select(title="选择要删除的风格", value="", options=[], sizing_mode="stretch_width")
+    delete_style_button = Button(
+        label="删除选中风格",
+        button_type="danger",
+        height=40,
+        sizing_mode="stretch_width",
+    )
 
     style_tabs = []
     tabs_widget = Tabs(tabs=[])
@@ -368,30 +378,47 @@ def make_document(doc: Document, provider, model):
         placeholder="在这里输入需要转换的文章...",
         value="",
         rows=20,
-        width=700,
+        sizing_mode="stretch_width",
         max_length=10000000,
     )
 
-    style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", width=700)
+    style_select_div = Div(text="<p>选择要使用的风格（在左侧切换tab）</p>", sizing_mode="stretch_width")
 
     # 历史记录相关组件
-    history_div = Div(text="<h3>历史记录</h3>", width=700)
+    history_div = Div(text="<h3>历史记录</h3>", sizing_mode="stretch_width")
 
     # 历史记录下拉列表
-    history_select = Select(title="选择历史记录", value="", options=[], width=700)
+    history_select = Select(title="选择历史记录", value="", options=[], sizing_mode="stretch_width")
 
     # 恢复历史记录按钮
-    restore_history_button = Button(label="恢复选中记录", button_type="warning", width=150, height=40, disabled=True)
+    restore_history_button = Button(
+        label="恢复选中记录",
+        button_type="warning",
+        height=40,
+        disabled=True,
+        sizing_mode="stretch_width",
+    )
 
     # 清除历史记录按钮
-    clear_history_button = Button(label="清除历史记录", button_type="danger", width=150, height=40)
+    clear_history_button = Button(
+        label="清除历史记录",
+        button_type="danger",
+        height=40,
+        sizing_mode="stretch_width",
+    )
 
-    analyze_button = Button(label="重写", button_type="primary", width=700, height=50)
+    analyze_button = Button(label="重写", button_type="primary", height=50, sizing_mode="stretch_width")
 
-    result_div = Div(text="", width=700)
+    result_div = Div(text="", sizing_mode="stretch_width")
 
     # 添加复制按钮
-    copy_button = Button(label="复制结果", button_type="success", width=120, height=40, disabled=True)
+    copy_button = Button(
+        label="复制结果",
+        button_type="success",
+        height=40,
+        disabled=True,
+        sizing_mode="stretch_width",
+    )
 
     def copy_to_clipboard():
         """使用Python复制文本到剪贴板"""
@@ -507,7 +534,7 @@ def make_document(doc: Document, provider, model):
                 style_name = entry.get("style_name", "未命名风格")
                 result_div.text = f"""
                 <h3>使用 "{style_name}" 风格重写结果:</h3>
-                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
+                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; box-sizing: border-box;">
                     <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(entry["result_text"])}</div>
                 </div>
                 """
@@ -598,7 +625,7 @@ def make_document(doc: Document, provider, model):
                 )
                 result_div.text = f"""
                 <h3>使用 "{style_name}" 风格重写结果:</h3>
-                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; width: 700px; box-sizing: border-box;">
+                <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; box-sizing: border-box;">
                     <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(result)}</div>
                 </div>
                 """
@@ -690,27 +717,30 @@ def make_document(doc: Document, provider, model):
     generate_style_button.on_click(generate_selected_style)
 
     left_column = column(
-        Div(text="<h2>风格管理</h2>", width=700),
+        Div(text="<h2>风格管理</h2>", sizing_mode="stretch_width"),
         row(add_style_button, style_select, delete_style_button, generate_style_button),
         initial_tabs,
+        sizing_mode="stretch_width",
     )
 
     right_column = column(
-        Div(text="<h2>风格转换</h2>", width=700),
+        Div(text="<h2>风格转换</h2>", sizing_mode="stretch_width"),
         style_select_div,
         target_article_input,
         analyze_button,
-        row(copy_button, width=700),
+        row(copy_button),
         result_div,
         # 历史记录部分
         history_div,
         history_select,
         row(restore_history_button, clear_history_button),
+        sizing_mode="stretch_width",
     )
 
     layout = column(
-        Div(text="<h1>文章风格分析与重写工具</h1>", width=1400),
-        row(left_column, right_column),
+        Div(text="<h1>文章风格分析与重写工具</h1>", sizing_mode="stretch_width"),
+        row(left_column, right_column, sizing_mode="stretch_both"),
+        sizing_mode="stretch_width",
     )
 
     doc.add_root(layout)
