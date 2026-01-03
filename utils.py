@@ -45,56 +45,59 @@ def get_llm(provider="antigravity", model=None):
     temperature = 0.3
     provider = provider.lower()
 
-    if provider == "ollama":
-        model = model or "codellama"
-        glog_info(f"{provider} {model}")
+    provider_configs = {
+        "ollama": {
+            "provider": "ollama",
+            "model": "codellama",
+            "base_url": "http://localhost:11434",
+        },
+        "antigravity": {
+            "provider": "openai",
+            "model": "gemini-3-flash",
+            "api_key": ANTIGRAVITY_API_KEY,
+            "base_url": ANTIGRAVITY_BASE_URL,
+            "error_msg": "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL",
+        },
+        "dashscope": {
+            "provider": "openai",
+            "model": "qwen3-coder-plus",
+            "api_key": DASHSCOPE_API_KEY,
+            "base_url": DASHSCOPE_BASE_URL,
+            "error_msg": "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.",
+        },
+        "openai": {
+            "provider": "openai",
+            "model": "gpt-4",
+            "api_key": OPENAI_API_KEY,
+            "base_url": OPENAI_BASE_URL,
+            "error_msg": "OpenAI API credentials not found. Please set OPENAI_API_KEY env var.",
+        },
+    }
 
-        return LLM(
-            model=f"{model}",
-            base_url="http://localhost:11434",
-            temperature=temperature,
-        )
-    elif provider == "antigravity":
-        if ANTIGRAVITY_API_KEY and ANTIGRAVITY_BASE_URL:
-            model = model or "gemini-3-flash"
-            glog_info(f"{provider} {model}")
-            return LLM(
-                provider="openai",
-                model=model,
-                api_key=ANTIGRAVITY_API_KEY,
-                base_url=ANTIGRAVITY_BASE_URL,
-                temperature=temperature,
-            )
-        else:
-            raise ValueError(
-                "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY, ANTIGRAVITY_BASE_URL env var."
-            )
-    elif provider == "dashscope":
-        if DASHSCOPE_API_KEY and DASHSCOPE_BASE_URL:
-            model = model or "qwen3-coder-plus"
-            glog_info(f"{provider} {model}")
+    if provider not in provider_configs:
+        raise ValueError(f"Unknown provider: {provider}")
 
-            return LLM(
-                provider="openai",
-                model=model,
-                api_key=DASHSCOPE_API_KEY,
-                base_url=DASHSCOPE_BASE_URL,
-                temperature=temperature,
-            )
-        else:
-            raise ValueError("Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.")
-    elif provider == "openai":
-        if OPENAI_API_KEY and OPENAI_BASE_URL:
-            model = model or "gpt-4"
-            return LLM(
-                provider="openai",
-                model=model,
-                api_key=OPENAI_API_KEY,
-                base_url=OPENAI_BASE_URL,
-                temperature=temperature,
-            )
-        else:
-            raise ValueError("OpenAI API credentials not found. Please set OPENAI_API_KEY env var.")
+    config = provider_configs[provider]
+
+    if provider != "ollama" and not (config["api_key"] and config["base_url"]):
+        raise ValueError(config["error_msg"])
+
+    model = model or config["model"]
+    glog_info(f"{provider} {model}")
+
+    llm_params = {
+        "provider": config["provider"],
+        "base_url": config["base_url"],
+        "model": model,
+        "temperature": temperature,
+    }
+
+    if provider != "ollama":
+        llm_params["api_key"] = config["api_key"]
+    else:
+        pass
+
+    return LLM(**llm_params)
 
 
 # break line every 80 characters if line is longer than 80 characters
