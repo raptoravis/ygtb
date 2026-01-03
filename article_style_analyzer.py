@@ -54,7 +54,7 @@ def save_history(history):
         json.dump({"history": history}, f, ensure_ascii=False, indent=2)
 
 
-def add_history_entry(original_text, result_text, style_name):
+def add_history_entry(original_text, result_text, style_name, additional_instructions=""):
     """添加新的历史记录条目"""
     history = load_history()
 
@@ -64,6 +64,7 @@ def add_history_entry(original_text, result_text, style_name):
         "original_text": original_text,
         "result_text": result_text,
         "style_name": style_name,
+        "additional_instructions": additional_instructions,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "date": datetime.now().strftime("%Y-%m-%d"),
     }
@@ -437,6 +438,14 @@ def make_document(doc: Document, provider, model):
         sizing_mode="stretch_width",
     )
 
+    # 清除额外指令按钮
+    clear_instructions_button = Button(
+        label="清除额外指令",
+        button_type="warning",
+        height=40,
+        sizing_mode="stretch_width",
+    )
+
     def copy_to_clipboard():
         """使用Python复制文本到剪贴板"""
         try:
@@ -547,6 +556,10 @@ def make_document(doc: Document, provider, model):
                 # 恢复原文到输入框
                 target_article_input.value = entry["original_text"]
 
+                # 恢复额外指令
+                additional_instructions = entry.get("additional_instructions", "")
+                additional_instructions_input.value = additional_instructions
+
                 # 恢复结果到显示区域
                 style_name = entry.get("style_name", "未命名风格")
                 result_div.text = f"""
@@ -585,6 +598,18 @@ def make_document(doc: Document, provider, model):
     # 绑定事件
     restore_history_button.on_click(restore_selected_history)
     clear_history_button.on_click(clear_history)
+
+    # 清除额外指令
+    def clear_instructions():
+        additional_instructions_input.value = ""
+        clear_instructions_button.label = "已清除"
+
+        def reset_button():
+            clear_instructions_button.label = "清除额外指令"
+
+        doc.add_timeout_callback(reset_button, 2000)
+
+    clear_instructions_button.on_click(clear_instructions)
 
     # 当下拉列表选择变化时启用/禁用恢复按钮
     def on_history_select_change(attr, old, new):
@@ -652,7 +677,7 @@ def make_document(doc: Document, provider, model):
                 copy_button.disabled = False
 
                 # 保存历史记录
-                add_history_entry(target_article, result, style_name)
+                add_history_entry(target_article, result, style_name, additional_instructions)
                 update_history_select()
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>重写出错: {str(e)}</p>"
@@ -748,7 +773,7 @@ def make_document(doc: Document, provider, model):
         target_article_input,
         analyze_button,
         additional_instructions_input,
-        row(copy_button),
+        row(copy_button, clear_instructions_button),
         result_div,
         # 历史记录部分
         history_div,
