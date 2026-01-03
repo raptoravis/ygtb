@@ -249,14 +249,14 @@ class StyleTab:
             for i, article in enumerate(articles):
                 article_div = Div(
                     text=f"""
-                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;
-                        background-color: #f9f9f9; box-sizing: border-box;">
-                        <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
-                        <div style="white-space: pre-wrap; overflow-wrap: break-word;">
-                            {html.escape(article["content"])}
+                        <div style="border: 1px solid #ddd; padding: 15px; margin: 5px 0;
+                            background-color: #f9f9f9; box-sizing: border-box; text-align: left;">
+                            <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
+                            <div style="white-space: pre-wrap; overflow-wrap: break-word; text-align: left;">
+                                {html.escape(article["content"])}
+                            </div>
                         </div>
-                    </div>
-                    """,
+                        """,
                     sizing_mode="stretch_width",
                 )
                 children.append(article_div)
@@ -387,7 +387,7 @@ def make_document(doc: Document, provider, model):
         title="输入需要风格转换的文章",
         placeholder="在这里输入需要转换的文章...",
         value="",
-        rows=20,
+        rows=15,
         sizing_mode="stretch_width",
         max_length=10000000,
     )
@@ -423,7 +423,7 @@ def make_document(doc: Document, provider, model):
         title="额外指令（可选）",
         placeholder="输入额外的指令，例如：让文章更简洁、增加幽默感、使用更正式的语气等...",
         value="",
-        rows=3,
+        rows=4,
         sizing_mode="stretch_width",
     )
 
