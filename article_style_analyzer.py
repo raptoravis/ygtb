@@ -178,7 +178,7 @@ class StyleTab:
             value=style_data.get("description", ""),
             title="风格描述",
             placeholder="描述这个风格的特点...",
-            rows=8,
+            rows=12,
             sizing_mode="stretch_width",
         )
 
@@ -186,15 +186,25 @@ class StyleTab:
             title="输入参考文章",
             placeholder="在这里输入文章内容...",
             value="",
-            rows=10,
+            rows=8,
             sizing_mode="stretch_width",
             max_length=10000000,
         )
 
-        self.add_article_button = Button(label="添加文章", button_type="success", height=40)
+        self.add_article_button = Button(
+            label="添加文章",
+            button_type="success",
+            height=40,
+            sizing_mode="stretch_width",
+        )
 
         self.article_select = Select(title="选择要删除的文章", value="", options=[], sizing_mode="stretch_width")
-        self.delete_article_button = Button(label="删除选中文章", button_type="danger", height=40)
+        self.delete_article_button = Button(
+            label="删除选中文章",
+            button_type="danger",
+            height=40,
+            sizing_mode="stretch_width",
+        )
 
         self.add_article_button.on_click(self.add_article)
         self.delete_article_button.on_click(self.delete_selected_article)
@@ -249,17 +259,27 @@ class StyleTab:
             for i, article in enumerate(articles):
                 article_div = Div(
                     text=f"""
-                        <div style="border: 1px solid #ddd; padding: 15px; margin: 5px 0;
-                            background-color: #f9f9f9; box-sizing: border-box; text-align: left;">
-                            <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
-                            <div style="white-space: pre-wrap; overflow-wrap: break-word; text-align: left;">
-                                {html.escape(article["content"])}
-                            </div>
+                        <p><strong>文章 {i + 1}</strong> - <small>添加时间: {article.get("time", "N/A")}</small></p>
+                        <div style="white-space: pre-wrap; overflow-wrap: break-word; text-align: left;">
+                            {html.escape(article["content"])}
                         </div>
                         """,
                     sizing_mode="stretch_width",
                 )
-                children.append(article_div)
+                article_wrapper = row(
+                    article_div,
+                    sizing_mode="stretch_width",
+                    styles={
+                        "border": "1px solid #ddd",
+                        "padding": "15px",
+                        "margin": "5px 0",
+                        "background-color": "#f9f9f9",
+                        "box-sizing": "border-box",
+                        "width": "100%",
+                        "max-width": "100%",
+                    },
+                )
+                children.append(article_wrapper)
 
         self.articles_preview_div.children = children
 
@@ -442,7 +462,7 @@ def make_document(doc: Document, provider, model):
     clear_instructions_button = Button(
         label="清除额外指令",
         button_type="warning",
-        height=40,
+        height=50,
         sizing_mode="stretch_width",
     )
 
@@ -803,9 +823,9 @@ def make_document(doc: Document, provider, model):
         Div(text="<h2>风格转换</h2>", sizing_mode="stretch_width"),
         style_select_div,
         target_article_input,
-        analyze_button,
+        row(analyze_button, clear_instructions_button),
         additional_instructions_input,
-        row(copy_button, clear_instructions_button),
+        row(copy_button),
         result_div,
         # 历史记录部分
         history_div,
