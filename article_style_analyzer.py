@@ -620,6 +620,38 @@ def make_document(doc: Document, provider, model):
     # 初始化历史记录下拉列表
     update_history_select()
 
+    # 自动恢复最近一次的历史记录
+    def auto_restore_last_history():
+        history = load_history()
+        if history:
+            # 找到最新的记录（id最大的）
+            last_entry = max(history, key=lambda x: x["id"])
+
+            # 恢复原文到输入框
+            target_article_input.value = last_entry["original_text"]
+
+            # 恢复额外指令
+            additional_instructions = last_entry.get("additional_instructions", "")
+            additional_instructions_input.value = additional_instructions
+
+            # 恢复结果到显示区域
+            style_name = last_entry.get("style_name", "未命名风格")
+            result_div.text = f"""
+            <h3>使用 "{style_name}" 风格重写结果:</h3>
+            <div style="border: 1px solid #4CAF50; padding: 15px; margin: 10px 0; background-color: #f9f9f9; box-sizing: border-box;">
+                <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(last_entry["result_text"])}</div>
+            </div>
+            """
+
+            # 启用复制按钮
+            copy_button.disabled = False
+
+            # 自动选中对应的历史记录
+            history_select.value = str(last_entry["id"])
+
+    # 在文档加载完成后自动恢复最近的历史记录
+    doc.add_next_tick_callback(auto_restore_last_history)
+
     def analyze_and_rewrite():
         # 禁用按钮并显示分析中状态
         analyze_button.label = "重写中..."
