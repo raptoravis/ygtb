@@ -223,6 +223,7 @@ class StyleTab:
                     self.delete_article_button,
                 ),
                 self.articles_preview_div,
+                sizing_mode="stretch_width",
             ),
             title=style_data.get("name", "未命名风格"),
         )
@@ -342,6 +343,7 @@ def make_document(doc: Document, provider, model):
 
     style_tabs = []
     tabs_widget = Tabs(tabs=[])
+    left_column = None  # 先声明变量，稍后赋值
 
     def create_style_tabs():
         nonlocal style_tabs
@@ -357,12 +359,15 @@ def make_document(doc: Document, provider, model):
 
         return Tabs(tabs=[tab.panel for tab in style_tabs])
 
-    def update_style_tabs():
-        nonlocal tabs_widget
+    def update_style_tabs(new_tab_index=None):
+        nonlocal tabs_widget, left_column
         current_active = tabs_widget.active
         save_styles(styles_list)
         new_tabs_widget = create_style_tabs()
-        if current_active is not None and current_active < len(new_tabs_widget.tabs):
+        # 如果指定了新 tab 索引，则切换到该 tab；否则保持当前激活的 tab
+        if new_tab_index is not None and 0 <= new_tab_index < len(new_tabs_widget.tabs):
+            new_tabs_widget.active = new_tab_index
+        elif current_active is not None and current_active < len(new_tabs_widget.tabs):
             new_tabs_widget.active = current_active
         left_column.children[2] = new_tabs_widget
         tabs_widget = new_tabs_widget
@@ -383,7 +388,8 @@ def make_document(doc: Document, provider, model):
         }
         styles_list.append(new_style)
         save_styles(styles_list)
-        update_style_tabs()
+        # 切换到新创建的 tab（最后一个）
+        update_style_tabs(new_tab_index=len(styles_list) - 1)
 
     def delete_selected_style():
         val = style_select.value
