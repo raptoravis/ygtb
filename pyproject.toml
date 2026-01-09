@@ -24,6 +24,7 @@ dependencies = [
     "pyperclip>=1.11.0",
     "scrapegraphai>=1.67.0",
     "playwright>=1.57.0",
+    "litellm[proxy]>=0.1.236",
 ]
 
 [tool.ruff]

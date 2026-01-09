@@ -49,7 +49,7 @@ def get_llm_params(provider: str, model: str) -> dict:
     provider_configs = {
         "ollama": {
             "provider": "ollama",
-            "model": "codellama",
+            "model": None,  # Will use the model parameter
             "base_url": "http://localhost:11434",
         },
         "antigravity": {

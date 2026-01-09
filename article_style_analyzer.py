@@ -896,7 +896,7 @@ def main():
     apps = {"/": Application(FunctionHandler(make_document_with_args))}
 
     port = 6006
-    server = Server(apps, port=port)
+    server = Server(apps, port=port, session_token_expiration=3600)
 
     glog_info(colored(f"使用 LLM 提供商: {args.provider}", "cyan"))
     if args.model:
