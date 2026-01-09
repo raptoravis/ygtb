@@ -178,7 +178,16 @@ class StyleTab:
             value=style_data.get("description", ""),
             title="风格描述",
             placeholder="描述这个风格的特点...",
-            rows=12,
+            rows=6,
+            sizing_mode="stretch_width",
+        )
+
+        # 风格专有的额外指令文本框
+        self.style_additional_instructions_input = TextAreaInput(
+            value=style_data.get("additional_instructions", ""),
+            title="风格额外指令（可选）",
+            placeholder="输入该风格专有的额外指令，例如：保持特定句式、使用特定词汇等...",
+            rows=4,
             sizing_mode="stretch_width",
         )
 
@@ -216,6 +225,7 @@ class StyleTab:
             child=column(
                 row(self.name_input, sizing_mode="stretch_width"),
                 self.desc_input,
+                self.style_additional_instructions_input,
                 self.article_input,
                 row(
                     self.add_article_button,
@@ -230,6 +240,7 @@ class StyleTab:
 
         self.name_input.on_change("value", self.on_name_change)
         self.desc_input.on_change("value", self.on_desc_change)
+        self.style_additional_instructions_input.on_change("value", self.on_additional_instructions_change)
 
     def on_name_change(self, attr, old, new):
         new_name = new.strip() or "未命名风格"
@@ -239,6 +250,10 @@ class StyleTab:
 
     def on_desc_change(self, attr, old, new):
         self.style_data["description"] = new
+        save_styles(self.styles_list)
+
+    def on_additional_instructions_change(self, attr, old, new):
+        self.style_data["additional_instructions"] = new
         save_styles(self.styles_list)
 
     def update_articles_display(self):
@@ -320,6 +335,7 @@ class StyleTab:
         new_name = self.name_input.value or "未命名风格"
         self.style_data["name"] = new_name
         self.style_data["description"] = self.desc_input.value or ""
+        self.style_data["additional_instructions"] = self.style_additional_instructions_input.value or ""
         self.panel.title = new_name
 
 
@@ -384,6 +400,7 @@ def make_document(doc: Document, provider, model):
         new_style = {
             "name": "新风格",
             "description": "",
+            "additional_instructions": "",
             "articles": [],
         }
         styles_list.append(new_style)
@@ -716,12 +733,24 @@ def make_document(doc: Document, provider, model):
                 save_styles(styles_list)
 
                 style_name = active_style.get("name", "未命名风格")
-                additional_instructions = additional_instructions_input.value.strip()
+
+                # 合并额外指令：风格的额外指令 + 全局额外指令
+                style_instructions = active_style.get("additional_instructions", "").strip()
+                global_instructions = additional_instructions_input.value.strip()
+
+                # 风格指令在前，全局指令在后
+                if style_instructions and global_instructions:
+                    combined_instructions = f"{style_instructions}\n\n{global_instructions}"
+                elif style_instructions:
+                    combined_instructions = style_instructions
+                else:
+                    combined_instructions = global_instructions
+
                 result = analyze_article_with_style(
                     target_article,
                     style_description,
                     style_name,
-                    additional_instructions,
+                    combined_instructions,
                     provider,
                     model,
                 )
@@ -734,8 +763,8 @@ def make_document(doc: Document, provider, model):
                 # 启用复制按钮
                 copy_button.disabled = False
 
-                # 保存历史记录
-                add_history_entry(target_article, result, style_name, additional_instructions)
+                # 保存历史记录（使用合并后的额外指令）
+                add_history_entry(target_article, result, style_name, combined_instructions)
                 update_history_select()
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>重写出错: {str(e)}</p>"
