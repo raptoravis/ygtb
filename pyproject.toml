@@ -20,11 +20,14 @@ dependencies = [
     "bokeh-sampledata>=2025.0",
     "ddgs>=9.10.0",
     "polygon-api-client>=1.16.3",
-    "crewai[tools]>=1.7.2",
     "pyperclip>=1.11.0",
     "scrapegraphai>=1.67.0",
     "playwright>=1.57.0",
     "litellm[proxy]>=0.1.236",
+    "langchain>=0.3.27",
+    "langchain-community>=0.3.31",
+    "langchain-openai>=0.3.23",
+    "langchain-ollama>=0.3.10",
 ]
 
 [tool.ruff]

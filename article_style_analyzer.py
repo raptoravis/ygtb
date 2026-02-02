@@ -10,10 +10,10 @@ from bokeh.document import Document
 from bokeh.layouts import column, row
 from bokeh.models import Button, Div, Select, TabPanel, Tabs, TextAreaInput, TextInput
 from bokeh.server.server import Server
-from crewai import Agent, Crew, Process, Task
+from langchain.prompts import ChatPromptTemplate
 from termcolor import colored
 
-from utils import get_llm, glog_info
+from utils import get_langchain_llm, glog_info
 
 HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".ygtb")
 
@@ -75,19 +75,19 @@ def add_history_entry(original_text, result_text, style_name, additional_instruc
 
 
 def generate_style_description_from_articles(reference_articles, style_name, provider, model):
-    llm = get_llm(provider=provider, model=model)
-    analyzer = Agent(
-        role="文章风格分析师",
-        goal="分析参考文章的风格并生成详细的风格描述",
-        backstory="你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，并用简洁准确的语言描述这些风格特点。",
-        llm=llm,
-        verbose=True,
-    )
+    llm = get_langchain_llm(provider=provider, model=model)
 
     reference_text = "\n\n".join([f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)])
 
-    task = Task(
-        description=f"""分析以下参考文章的风格特点，生成一个详细的风格描述。
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，并用简洁准确的语言描述这些风格特点。",
+            ),
+            (
+                "human",
+                """分析以下参考文章的风格特点，生成一个详细的风格描述。
 
 风格名称: {style_name}
 
@@ -102,20 +102,14 @@ def generate_style_description_from_articles(reference_articles, style_name, pro
 5. 特殊的表达习惯或写作手法
 
 请将以上分析整合成一个连贯、详细的风格描述，这个描述将用于指导AI以相同的风格重写其他文章。
-描述应该具体、准确，足以让AI理解和模仿这种写作风格。
-""",
-        agent=analyzer,
-        expected_output="详细的风格描述",
+描述应该具体、准确，足以让AI理解和模仿这种写作风格。""",
+            ),
+        ]
     )
 
-    crew = Crew(
-        agents=[analyzer],
-        tasks=[task],
-        process=Process.sequential,
-    )
-
-    result = crew.kickoff()
-    return str(result)
+    chain = prompt | llm
+    result = chain.invoke({"style_name": style_name, "reference_text": reference_text})
+    return str(result.content)
 
 
 def analyze_article_with_style(
@@ -126,18 +120,16 @@ def analyze_article_with_style(
     provider,
     model,
 ):
-    llm = get_llm(provider=provider, model=model)
-    analyzer = Agent(
-        role="文章风格分析师",
-        goal="根据风格描述用这种风格重写目标文章",
-        backstory="你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。",
-        llm=llm,
-        verbose=True,
-    )
+    llm = get_langchain_llm(provider=provider, model=model)
 
     instructions_part = f"\n\n额外指令:\n{additional_instructions}" if additional_instructions else ""
-    task = Task(
-        description=f"""根据以下风格描述，用这种风格重写目标文章。
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。"),
+            (
+                "human",
+                """根据以下风格描述，用这种风格重写目标文章。
 
 风格名称: {style_name}
 风格描述: {style_description}
@@ -146,20 +138,21 @@ def analyze_article_with_style(
 目标文章:
 {article_text}
 
-请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。
-""",
-        agent=analyzer,
-        expected_output="重写后的文章内容",
+请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。""",
+            ),
+        ]
     )
 
-    crew = Crew(
-        agents=[analyzer],
-        tasks=[task],
-        process=Process.sequential,
+    chain = prompt | llm
+    result = chain.invoke(
+        {
+            "style_name": style_name,
+            "style_description": style_description,
+            "instructions_part": instructions_part,
+            "article_text": article_text,
+        }
     )
-
-    result = crew.kickoff()
-    return str(result)
+    return str(result.content)
 
 
 class StyleTab:

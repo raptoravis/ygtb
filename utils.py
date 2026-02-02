@@ -115,6 +115,60 @@ def get_llm(provider: str, model: str):
     return LLM(**llm_params)
 
 
+def get_langchain_llm(provider: str, model: str):
+    """Get LangChain compatible LLM instance for article_style_analyzer"""
+    provider = provider.lower()
+    temperature = 0.3
+
+    provider_configs = {
+        "ollama": {
+            "model": model or "llama3.2",
+            "base_url": "http://localhost:11434",
+        },
+        "antigravity": {
+            "model": model or "gemini-3-flash",
+            "api_key": ANTIGRAVITY_API_KEY,
+            "base_url": ANTIGRAVITY_BASE_URL,
+        },
+        "dashscope": {
+            "model": model or "qwen3-coder-plus",
+            "api_key": DASHSCOPE_API_KEY,
+            "base_url": DASHSCOPE_BASE_URL,
+        },
+        "openai": {
+            "model": model or "gpt-4",
+            "api_key": OPENAI_API_KEY,
+            "base_url": OPENAI_BASE_URL,
+        },
+        "customai": {
+            "model": model or "kuaishou/kat-coder-pro-v1-free",
+            "api_key": CUSTOMAI_API_KEY,
+            "base_url": CUSTOMAI_BASE_URL,
+        },
+    }
+
+    if provider not in provider_configs:
+        raise ValueError(f"Unknown provider: {provider}")
+
+    config = provider_configs[provider]
+
+    if provider == "ollama":
+        from langchain_ollama import OllamaLLM
+
+        return OllamaLLM(model=config["model"], base_url=config["base_url"], temperature=temperature)
+    else:
+        if not (config["api_key"] and config["base_url"]):
+            raise ValueError(f"API credentials not found for provider: {provider}")
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=config["model"],
+            api_key=config["api_key"],
+            base_url=config["base_url"],
+            temperature=temperature,
+        )
+
+
 # break line every 80 characters if line is longer than 80 characters
 # don't break in the middle of a word
 def pretty_print_result(result):
