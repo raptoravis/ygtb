@@ -10,45 +10,52 @@ Manage reference articles and generate prompts for style analysis.
 ## When to Use
 
 Use this skill when you have one or more reference articles and need to:
+
 - Extract writing style characteristics
 - Create a style description for later use
 - Analyze tone, vocabulary, structure, and rhetorical patterns
 
 ## Workflow
 
-1. **Generate Prompt**: Use the script to generate a complete LLM prompt
-2. **Execute with LLM**: Send the prompt to an LLM externally
-3. **Save Result**: Save the style description to the style database (optional)
+1. **Get the style by the style name**: Use the script to get the style as the provided style name might be fuzzy
+2. **Generate Prompt**: Use the script to generate a complete LLM prompt
+3. **Use the Prompt**:
+4. **Save Result**: Save the rewritten article for the ref
 
 ## Analysis Framework
 
 When analyzing reference articles, the LLM should examine these dimensions:
 
 ### 1. Writing Style Category
+
 - Formal vs Casual
 - Academic vs Literary vs Business
 - Technical vs General audience
 - Narrative vs Expository vs Persuasive
 
 ### 2. Language Characteristics
+
 - Vocabulary preferences (simple vs complex, abstract vs concrete)
 - Sentence structure (short vs long, varied vs uniform)
 - Rhetorical devices (metaphors, analogies, repetition)
 - Transition words and connectors
 
 ### 3. Emotional Tone
+
 - Serious vs Lighthearted
 - Enthusiastic vs Objective
 - Authoritative vs Friendly
 - Urgent vs Relaxed
 
 ### 4. Article Structure
+
 - Opening patterns (hook, context, thesis)
 - Body organization (chronological, logical, thematic)
 - Closing techniques (summary, call-to-action, reflection)
 - Paragraph length and flow
 
 ### 5. Special Expression Habits
+
 - Unique phrases or expressions
 - Parenthetical remarks
 - Questions or rhetorical questions
@@ -59,7 +66,7 @@ When analyzing reference articles, the LLM should examine these dimensions:
 ### Generate Style Analysis Prompt
 
 ```bash
-python skills/style-generator/scripts/generate_style.py \
+uv run python skills/style-generator/scripts/generate_style.py \
     --articles article1.txt,article2.txt \
     --style-name "我的风格" \
     --generate-prompt
@@ -101,7 +108,7 @@ After obtaining the style description from LLM:
 echo "风格描述内容..." > style_description.txt
 
 # Then save to style database
-python skills/style-generator/scripts/generate_style.py \
+uv run python skills/style-generator/scripts/generate_style.py \
     --articles article1.txt,article2.txt \
     --style-name "我的风格" \
     --style-description-file style_description.txt \
@@ -110,9 +117,9 @@ python skills/style-generator/scripts/generate_style.py \
 
 This will add the style to `data/articles.json`, making it available for use by `article-rewriter`.
 
-### Use in Python
+### Use in uv run python
 
-```python
+```uv run python
 from utils import save_styles, load_styles
 
 # Save style programmatically
