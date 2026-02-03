@@ -1,11 +1,11 @@
 ---
 name: article-rewriter
-description: Rewrite articles according to a specified writing style description. Use when you need to transform existing content to match a particular writing style while preserving the core meaning. This skill guides the AI assistant to strictly follow a provided style description and rewrite the target article accordingly.
+description: Article rewriting style management tool. Manage writing styles and generate prompts for article rewriting. Use when you need to transform content to match a particular writing style.
 ---
 
 # Article Rewriter
 
-Rewrite articles to match a specific writing style.
+Manage writing styles and generate prompts for article rewriting.
 
 ## When to Use
 
@@ -16,35 +16,28 @@ Use this skill when you have:
 
 ## Workflow
 
-1. **Receive Inputs**: 
-   - Target article text
-   - Style description
-   - Optional: style name and additional instructions
-
-2. **Understand Style**: Carefully study the style description
-
-3. **Rewrite Article**: Transform the content while maintaining core meaning
-
-4. **Quality Check**: Verify the rewrite matches the target style
+1. **Generate Prompt**: Use the script to generate a complete LLM prompt
+2. **Execute with LLM**: Send the prompt to an LLM externally
+3. **Save Result**: Save the rewritten article to the style database (optional)
 
 ## Style Adherence Guidelines
 
-When rewriting, you MUST follow these principles:
+When rewriting, the LLM MUST follow these principles:
 
 ### 1. Preserve Core Content
 - Keep all key information and facts
-- Maintain the original message and intent
+- Maintain original message and intent
 - Do not add or remove significant information
 
 ### 2. Apply Style Elements
-- **Vocabulary**: Use words consistent with the style description
+- **Vocabulary**: Use words consistent with style description
 - **Sentence Structure**: Match sentence length and complexity patterns
-- **Tone**: Adopt the emotional tone specified
-- **Structure**: Follow the opening/body/closing patterns described
+- **Tone**: Adopt emotional tone specified
+- **Structure**: Follow opening/body/closing patterns described
 
 ### 3. Handle Special Instructions
 If additional instructions are provided (e.g., "make it more concise", "add humor"):
-- Apply these on top of the style requirements
+- Apply these on top of style requirements
 - Ensure they don't conflict with core style elements
 - Prioritize style consistency over additional instructions if there's conflict
 
@@ -53,93 +46,101 @@ If additional instructions are provided (e.g., "make it more concise", "add humo
 - Avoid awkward phrasing that sacrifices clarity for style
 - Maintain logical flow between paragraphs
 
-## Output Format
-
-```
-【风格名称】：[风格名称]
-
-【重写结果】：
-[重写后的文章全文]
-
----
-【风格应用说明】（可选）：
-[简要说明如何应用了风格描述中的关键要素]
-```
-
-## Usage Example
-
-User: "请用以下风格重写文章："
-
-[用户提供：]
-- 风格描述：[详细的风格描述]
-- 目标文章：[原文]
-- 额外指令：让文章更简洁
-
-Claude:
-1. 仔细研究风格描述
-2. 理解目标文章的核心内容
-3. 按照风格要求进行重写
-4. 应用额外指令（简洁化）
-5. 输出重写结果
-
 ## Command Line Usage
 
-### Basic Usage with Style Description Text
-
-```bash
-python skills/article-rewriter/scripts/rewrite_article.py \
-    --input target_article.txt \
-    --style-description "风格描述内容..." \
-    --style-name "我的风格" \
-    --instructions "让文章更简洁" \
-    --provider antigravity
-```
-
-### Using Saved Style from data/articles.json
-
-First, list available styles:
+### List Available Styles
 
 ```bash
 python skills/article-rewriter/scripts/rewrite_article.py --list-styles
 ```
 
-Then use a saved style:
-
-```bash
-python skills/article-rewriter/scripts/rewrite_article.py \
-    --input target_article.txt \
-    --use-saved-style "我的风格" \
-    --provider antigravity \
-    --output rewritten.txt
-```
-
-### Saving Rewritten Article to Style Database
-
-You can save the rewritten article to the style's articles array for future reference:
+### Generate Rewrite Prompt
 
 ```bash
 python skills/article-rewriter/scripts/rewrite_article.py \
     --input target_article.txt \
     --use-saved-style "幽默短篇故事" \
-    --provider antigravity \
-    --save-article
+    --instructions "让文章更简洁" \
+    --generate-prompt
 ```
 
-This will add the rewritten article to `data/articles.json` under the specified style's `articles` array, building up a collection of examples for that style.
+The script will output a complete prompt that you can send to an LLM:
 
-### Using Style Description File
+```text
+你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。
+
+根据以下风格描述，用这种风格重写目标文章。
+
+风格名称: 幽默短篇故事
+风格描述: [风格描述内容...]
+
+额外指令:
+让文章更简洁
+
+目标文章:
+[文章内容...]
+
+请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。
+```
+
+### Using Custom Style Description
 
 ```bash
 python skills/article-rewriter/scripts/rewrite_article.py \
     --input target_article.txt \
-    --style-description style_description.txt \
-    --provider antigravity
+    --style-description "风格描述文本..." \
+    --style-name "自定义风格" \
+    --generate-prompt
 ```
+
+Or use a file:
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --style-description style_desc.txt \
+    --generate-prompt
+```
+
+### Save Rewritten Article to Style Database
+
+After obtaining the rewritten article from LLM, you can save it:
+
+```python
+from utils import add_article_to_style
+
+rewritten_text = "重写后的文章内容..."
+add_article_to_style("幽默短篇故事", rewritten_text)
+```
+
+Or use the `--save-article` flag with a result file:
+
+```bash
+# First, save the LLM result to a file
+echo "重写结果..." > rewritten.txt
+
+# Then use article-rewriter to save it
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --use-saved-style "幽默短篇故事" \
+    --save-article
+```
+
+This will add the rewritten article to `data/articles.json` under the specified style's `articles` array.
 
 ## Important Notes
 
-- Style adherence is the top priority
-- If the style description is unclear, ask for clarification before rewriting
+- Style adherence is top priority
+- If style description is unclear, ask for clarification before rewriting
 - Maintain factual accuracy - never alter facts to fit style
 - When in doubt between style and accuracy, choose accuracy but note the compromise
-- For very long articles, you may work section by section if needed
+
+## Skill Execution for AI Assistant
+
+When this skill is invoked, the AI assistant should:
+
+1. Read the style description from saved style or provided text
+2. Generate a complete rewrite prompt following the template
+3. Call an external LLM with the prompt
+4. Return the rewritten article
+5. Optionally save to style database if requested

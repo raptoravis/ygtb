@@ -1,28 +1,28 @@
 ---
 name: style-generator
-description: Analyze reference articles and generate detailed writing style descriptions. Use when you need to extract and describe the writing style from one or more reference articles. This skill guides the AI assistant to analyze writing characteristics like tone, vocabulary, sentence structure, and rhetorical devices, then output a comprehensive style description for later use in rewriting other content.
+description: Writing style analysis and management tool. Generate prompts for analyzing reference articles and creating detailed writing style descriptions. Use when you need to extract and describe writing style from one or more reference articles.
 ---
 
 # Style Generator
 
-Generate detailed style descriptions from reference articles.
+Manage reference articles and generate prompts for style analysis.
 
 ## When to Use
 
 Use this skill when you have one or more reference articles and need to:
-- Extract the writing style characteristics
+- Extract writing style characteristics
 - Create a style description for later use
 - Analyze tone, vocabulary, structure, and rhetorical patterns
 
 ## Workflow
 
-1. **Receive Reference Articles**: The user provides one or more reference articles
-2. **Analyze Style**: Systematically analyze the writing characteristics
-3. **Generate Description**: Output a detailed, structured style description
+1. **Generate Prompt**: Use the script to generate a complete LLM prompt
+2. **Execute with LLM**: Send the prompt to an LLM externally
+3. **Save Result**: Save the style description to the style database (optional)
 
 ## Analysis Framework
 
-When analyzing reference articles, examine these dimensions:
+When analyzing reference articles, the LLM should examine these dimensions:
 
 ### 1. Writing Style Category
 - Formal vs Casual
@@ -54,81 +54,97 @@ When analyzing reference articles, examine these dimensions:
 - Questions or rhetorical questions
 - Direct address to reader
 
-## Output Format
-
-Generate a style description in this structure:
-
-```
-【风格名称】：[用户指定的名称]
-
-【写作风格】：[正式/随意/学术/文学/商务等]
-
-【语言特点】：
-- 用词习惯：[描述]
-- 句式结构：[描述]
-- 修辞手法：[描述]
-
-【情感基调】：[严肃/轻松/热情/客观等]
-
-【文章结构】：
-- 开头：[描述]
-- 正文：[描述]
-- 结尾：[描述]
-
-【特殊表达习惯】：[描述]
-
-【整体风格描述】：
-[一段连贯的总结性描述，让AI能够理解并模仿这种风格]
-```
-
-## Usage Example
-
-User: "请分析以下两篇文章的风格并生成风格描述"
-
-[用户提供参考文章]
-
-Claude:
-1. 阅读参考文章
-2. 按照分析框架进行系统性分析
-3. 输出结构化的风格描述
-4. 确认用户是否需要调整
-
 ## Command Line Usage
 
-### Basic Usage (Output to Console)
+### Generate Style Analysis Prompt
 
 ```bash
 python skills/style-generator/scripts/generate_style.py \
     --articles article1.txt,article2.txt \
     --style-name "我的风格" \
-    --provider antigravity
+    --generate-prompt
 ```
 
-### Save to File
+The script will output a complete prompt that you can send to an LLM:
 
-```bash
-python skills/style-generator/scripts/generate_style.py \
-    --articles article1.txt,article2.txt \
-    --style-name "我的风格" \
-    --provider antigravity \
-    --output style_description.txt
+```text
+你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，并用简洁准确的语言描述这些风格特点。
+
+分析以下参考文章的风格特点，生成一个详细的风格描述。
+
+风格名称: 我的风格
+
+参考文章:
+参考文章1:
+[文章1内容...]
+
+参考文章2:
+[文章2内容...]
+
+请分析参考文章的以下方面，并生成一个清晰、详细的风格描述：
+1. 写作风格（正式/随意/学术/文学等）
+2. 语言特点（用词习惯、句式结构、修辞手法等）
+3. 情感基调（严肃/轻松/热情/客观等）
+4. 文章结构（开头/正文/结尾的组织方式）
+5. 特殊的表达习惯或写作手法
+
+请将以上分析整合成一个连贯、详细的风格描述，这个描述将用于指导AI以相同的风格重写其他文章。
+描述应该具体、准确，足以让AI理解和模仿这种写作风格。
 ```
 
-### Save to data/articles.json for Article Rewriter
+### Save Style Description to File
+
+After obtaining the style description from LLM:
 
 ```bash
+# First, save the LLM result to a file
+echo "风格描述内容..." > style_description.txt
+
+# Then save to style database
 python skills/style-generator/scripts/generate_style.py \
     --articles article1.txt,article2.txt \
     --style-name "我的风格" \
-    --provider antigravity \
+    --style-description-file style_description.txt \
     --save
 ```
 
-The `--save` flag saves the generated style to `data/articles.json`, making it available for use by the `article-rewriter` skill.
+This will add the style to `data/articles.json`, making it available for use by `article-rewriter`.
+
+### Use in Python
+
+```python
+from utils import save_styles, load_styles
+
+# Save style programmatically
+styles = load_styles()
+new_style = {
+    "name": "我的风格",
+    "description": "风格描述内容...",
+    "additional_instructions": "",
+    "articles": [
+        {
+            "content": "参考文章1...",
+            "time": "2026-02-03 12:00:00"
+        }
+    ]
+}
+styles.append(new_style)
+save_styles(styles)
+```
 
 ## Important Notes
 
 - Be specific and concrete in descriptions
-- Include examples from the reference text when helpful
-- The description should be detailed enough for AI to replicate the style
+- Include examples from reference text when helpful
+- The description should be detailed enough for AI to replicate style
 - Ask for clarification if reference articles are unclear or inconsistent in style
+
+## Skill Execution for AI Assistant
+
+When this skill is invoked, the AI assistant should:
+
+1. Read the reference articles
+2. Generate a complete style analysis prompt
+3. Call an external LLM with the prompt
+4. Return the style description
+5. Optionally save to style database if requested

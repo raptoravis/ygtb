@@ -1,77 +1,48 @@
 """
-Article Rewriter - Rewrite articles according to a specified writing style.
+Article Rewriter Tool - Manage article styles and generate rewrite prompts.
 
-This module provides functionality to rewrite content to match a specific
-writing style description using LLM.
+This module provides functionality to:
+- List available writing styles from data/articles.json
+- Load style descriptions
+- Generate prompts for article rewriting (LLM call should be done externally)
+- Save rewritten articles to styles
 """
 
 import argparse
 import os
 import sys
-from typing import Optional
-
-from langchain.prompts import ChatPromptTemplate
 
 # Add project root to path for importing utils
-project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Also try adding current working directory to path
-cwd = os.getcwd()
-if cwd not in sys.path:
-    sys.path.insert(0, cwd)
-
-from utils import (
-    get_langchain_llm,
-    get_style_by_name,
-    list_styles,
-    add_article_to_style,
-)
+from utils import get_style_by_name, list_styles
 
 
-def rewrite_article(
+def generate_rewrite_prompt(
     article_text: str,
     style_description: str,
     style_name: str = "",
     additional_instructions: str = "",
-    provider: str = "antigravity",
-    model: Optional[str] = None,
 ) -> str:
     """
-    Rewrite an article according to a specified writing style.
+    Generate a prompt for rewriting an article according to a specified writing style.
 
     Args:
         article_text: The content to be rewritten
-        style_description: Detailed description of the target writing style
+        style_description: Detailed description of target writing style
         style_name: Name of the style (optional)
-        additional_instructions: Extra guidance for the rewrite (optional)
-        provider: LLM provider (antigravity, ollama, dashscope, openai, customai)
-        model: Specific model name to use (optional)
+        additional_instructions: Extra guidance for rewrite (optional)
 
     Returns:
-        The rewritten article text
-
-    Raises:
-        ValueError: If provider is not supported or API credentials are missing
+        A complete prompt string for LLM to execute
     """
-    llm = get_langchain_llm(provider=provider, model=model)
+    instructions_part = f"\n\n额外指令:\n{additional_instructions}" if additional_instructions else ""
 
-    instructions_part = (
-        f"\n\n额外指令:\n{additional_instructions}" if additional_instructions else ""
-    )
+    prompt = f"""你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "你是一个专业的写作风格模仿专家，能够根据提供的风格描述准确模仿各种写作风格。",
-            ),
-            (
-                "human",
-                """根据以下风格描述，用这种风格重写目标文章。
+根据以下风格描述，用这种风格重写目标文章。
 
 风格名称: {style_name}
 风格描述: {style_description}
@@ -80,34 +51,18 @@ def rewrite_article(
 目标文章:
 {article_text}
 
-请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。""",
-            ),
-        ]
-    )
+请严格按照上面的风格描述，重写目标文章，保持原文的核心内容不变。"""
 
-    chain = prompt | llm
-    result = chain.invoke(
-        {
-            "style_name": style_name,
-            "style_description": style_description,
-            "instructions_part": instructions_part,
-            "article_text": article_text,
-        }
-    )
-
-    # Extract content from result (handle both string and AIMessage types)
-    if hasattr(result, "content"):
-        return str(result.content)
-    return str(result)
+    return prompt
 
 
 def main():
-    parser = argparse.ArgumentParser(description="根据风格描述重写文章")
+    parser = argparse.ArgumentParser(description="管理写作风格并生成重写提示")
     parser.add_argument(
         "--input",
         type=str,
         default=None,
-        help="输入文章文件路径（使用 --list-styles 时可选）",
+        help="输入文章文件路径（使用 --list-styles 或 --generate-prompt 时可选）",
     )
     parser.add_argument(
         "--style-description",
@@ -134,32 +89,19 @@ def main():
         help="额外指令，例如：让文章更简洁、增加幽默感等",
     )
     parser.add_argument(
-        "--provider",
-        type=str,
-        default="antigravity",
-        help="LLM 提供商 (antigravity/ollama/dashscope/openai/customai)",
-    )
-    parser.add_argument(
-        "--model",
-        type=str,
-        default=None,
-        help="LLM 模型名称",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="输出文件路径（可选，默认输出到控制台）",
-    )
-    parser.add_argument(
-        "--list-styles",
+        "--generate-prompt",
         action="store_true",
-        help="列出 data/articles.json 中所有可用的风格",
+        help="生成重写提示（用于外部 LLM 调用）",
     )
     parser.add_argument(
         "--save-article",
         action="store_true",
         help="将重写后的文章保存到 data/articles.json 对应风格的 articles 数组中",
+    )
+    parser.add_argument(
+        "--list-styles",
+        action="store_true",
+        help="列出 data/articles.json 中所有可用的风格",
     )
 
     args = parser.parse_args()
@@ -173,17 +115,9 @@ def main():
         sys.exit(0)
 
     # Validate required arguments
-    if not args.input:
-        print("错误：必须指定 --input")
+    if not args.input and not args.generate_prompt:
+        print("错误：必须指定 --input（除非使用 --list-styles）")
         sys.exit(1)
-
-    # List styles and exit
-    if args.list_styles:
-        styles = list_styles()
-        print("可用的风格:")
-        for style in styles:
-            print(f"  - {style}")
-        sys.exit(0)
 
     # Validate style input options
     if args.style_description and args.use_saved_style:
@@ -210,7 +144,7 @@ def main():
         style = get_style_by_name(args.use_saved_style)
         if not style:
             print(f"错误：未找到名为 '{args.use_saved_style}' 的风格")
-            print(f"使用 --list-styles 查看可用的风格")
+            print("使用 --list-styles 查看可用的风格")
             sys.exit(1)
 
         style_description = style.get("description", "")
@@ -236,55 +170,27 @@ def main():
             # Use the argument directly as style description text
             style_description = args.style_description
 
-    print(f"正在重写文章...")
-    print(f"输入长度: {len(article_text)} 字符")
-    print(f"使用提供商: {args.provider}")
-    if args.model:
-        print(f"使用模型: {args.model}")
-    if final_style_name:
-        print(f"风格名称: {final_style_name}")
-    if args.instructions:
-        print(f"额外指令: {args.instructions}")
-
-    try:
-        result = rewrite_article(
+    # Generate prompt if requested
+    if args.generate_prompt:
+        prompt = generate_rewrite_prompt(
             article_text=article_text,
             style_description=style_description,
             style_name=final_style_name,
             additional_instructions=args.instructions,
-            provider=args.provider,
-            model=args.model,
         )
+        print("生成的重写提示:")
+        print("=" * 60)
+        print(prompt)
+        print("=" * 60)
+        sys.exit(0)
 
-        # Save to file if output specified
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(result)
-            print(f"\n重写完成，已保存到: {args.output}")
-
-        # Save to style's articles array if requested
-        if args.save_article:
-            if not final_style_name:
-                print(
-                    "\n警告：无法保存文章到风格。请使用 --use-saved-style 指定风格名称。"
-                )
-            else:
-                saved = add_article_to_style(final_style_name, result)
-                if saved:
-                    print(
-                        f"\n文章已保存到风格 '{final_style_name}' 的 articles 数组中。"
-                    )
-
-        # Print result if no output file specified
-        if not args.output:
-            print("\n重写结果:")
-            print("=" * 60)
-            print(result)
-            print("=" * 60)
-
-    except Exception as e:
-        print(f"错误: {str(e)}")
-        sys.exit(1)
+    print(f"输入长度: {len(article_text)} 字符")
+    if final_style_name:
+        print(f"风格名称: {final_style_name}")
+    if args.instructions:
+        print(f"额外指令: {args.instructions}")
+    print("\n提示：使用 --generate-prompt 参数生成完整的 LLM 提示")
+    print("      或者使用 --save-article 将重写后的结果保存到风格数据库")
 
 
 if __name__ == "__main__":

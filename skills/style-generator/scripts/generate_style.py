@@ -1,70 +1,45 @@
 """
-Style Generator - Analyze reference articles and generate writing style descriptions.
+Style Generator Tool - Manage writing styles and generate style analysis prompts.
 
-This module provides functionality to analyze one or more reference articles
-and generate a comprehensive style description using LLM.
+This module provides functionality to:
+- Read reference articles
+- Generate prompts for style analysis (LLM call should be done externally)
+- Save styles and articles to data/articles.json
 """
 
 import argparse
 import os
 import sys
 from datetime import datetime
-from typing import List, Optional
-
-from langchain.prompts import ChatPromptTemplate
+from typing import List
 
 # Add project root to path for importing utils
-project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Also try adding current working directory to path
-cwd = os.getcwd()
-if cwd not in sys.path:
-    sys.path.insert(0, cwd)
-
-from utils import get_langchain_llm, load_styles, save_styles
+from utils import load_styles, save_styles
 
 
-def generate_style_description(
+def generate_style_prompt(
     reference_articles: List[str],
     style_name: str,
-    provider: str = "antigravity",
-    model: Optional[str] = None,
 ) -> str:
     """
-    Analyze reference articles and generate a detailed style description.
+    Generate a prompt for analyzing reference articles and generating style description.
 
     Args:
         reference_articles: List of reference article texts to analyze
         style_name: Name for the style being analyzed
-        provider: LLM provider (antigravity, ollama, dashscope, openai, customai)
-        model: Specific model name to use (optional)
 
     Returns:
-        A detailed style description string
-
-    Raises:
-        ValueError: If provider is not supported or API credentials are missing
+        A complete prompt string for LLM to execute
     """
-    llm = get_langchain_llm(provider=provider, model=model)
+    reference_text = "\n\n".join([f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)])
 
-    reference_text = "\n\n".join(
-        [f"参考文章{i + 1}:\n{ref}" for i, ref in enumerate(reference_articles)]
-    )
+    prompt = f"""你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，并用简洁准确的语言描述这些风格特点。
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "你是一个专业的写作风格分析专家，能够准确捕捉文章的写作风格、语气、用词习惯和结构特点，"
-                "并用简洁准确的语言描述这些风格特点。",
-            ),
-            (
-                "human",
-                """分析以下参考文章的风格特点，生成一个详细的风格描述。
+分析以下参考文章的风格特点，生成一个详细的风格描述。
 
 风格名称: {style_name}
 
@@ -79,22 +54,63 @@ def generate_style_description(
 5. 特殊的表达习惯或写作手法
 
 请将以上分析整合成一个连贯、详细的风格描述，这个描述将用于指导AI以相同的风格重写其他文章。
-描述应该具体、准确，足以让AI理解和模仿这种写作风格。""",
-            ),
-        ]
-    )
+描述应该具体、准确，足以让AI理解和模仿这种写作风格。"""
 
-    chain = prompt | llm
-    result = chain.invoke({"style_name": style_name, "reference_text": reference_text})
+    return prompt
 
-    # Extract content from result (handle both string and AIMessage types)
-    if hasattr(result, "content"):
-        return str(result.content)
-    return str(result)
+
+def save_style_with_articles(
+    style_name: str,
+    style_description: str,
+    reference_articles: List[str],
+):
+    """
+    Save a style with reference articles to data/articles.json.
+
+    Args:
+        style_name: Name of the style
+        style_description: Generated style description
+        reference_articles: List of reference article texts
+    """
+    styles = load_styles()
+
+    # Create article entries for reference
+    article_entries = [
+        {
+            "content": article,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for article in reference_articles
+    ]
+
+    new_style = {
+        "name": style_name,
+        "description": style_description,
+        "additional_instructions": "",
+        "articles": article_entries,
+    }
+
+    # Check if style with same name already exists
+    existing_idx = None
+    for i, style in enumerate(styles):
+        if style.get("name") == style_name:
+            existing_idx = i
+            break
+
+    if existing_idx is not None:
+        # Update existing style
+        styles[existing_idx] = new_style
+        print(f"\n已更新风格 '{style_name}' 到 data/articles.json")
+    else:
+        # Add new style
+        styles.append(new_style)
+        print(f"\n已保存风格 '{style_name}' 到 data/articles.json")
+
+    save_styles(styles)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="从参考文章生成风格描述")
+    parser = argparse.ArgumentParser(description="管理写作风格并生成风格分析提示")
     parser.add_argument(
         "--articles",
         type=str,
@@ -108,27 +124,19 @@ def main():
         help="风格名称",
     )
     parser.add_argument(
-        "--provider",
-        type=str,
-        default="antigravity",
-        help="LLM 提供商 (antigravity/ollama/dashscope/openai/customai)",
-    )
-    parser.add_argument(
-        "--model",
-        type=str,
-        default=None,
-        help="LLM 模型名称",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="输出文件路径（可选，默认输出到控制台）",
+        "--generate-prompt",
+        action="store_true",
+        help="生成风格分析提示（用于外部 LLM 调用）",
     )
     parser.add_argument(
         "--save",
         action="store_true",
-        help="保存风格到 data/articles.json，供 article-rewriter 使用",
+        help="保存风格到 data/articles.json（需要先获得风格描述）",
+    )
+    parser.add_argument(
+        "--style-description-file",
+        type=str,
+        help="风格描述文件路径（与 --save 配合使用）",
     )
 
     args = parser.parse_args()
@@ -145,74 +153,43 @@ def main():
         with open(path, "r", encoding="utf-8") as f:
             reference_articles.append(f.read())
 
-    print(f"正在分析 {len(reference_articles)} 篇参考文章...")
+    print(f"读取 {len(reference_articles)} 篇参考文章...")
     print(f"风格名称: {args.style_name}")
-    print(f"使用提供商: {args.provider}")
-    if args.model:
-        print(f"使用模型: {args.model}")
 
-    try:
-        style_description = generate_style_description(
+    # Generate prompt if requested
+    if args.generate_prompt:
+        prompt = generate_style_prompt(
             reference_articles=reference_articles,
             style_name=args.style_name,
-            provider=args.provider,
-            model=args.model,
         )
+        print("\n生成的风格分析提示:")
+        print("=" * 60)
+        print(prompt)
+        print("=" * 60)
+        sys.exit(0)
 
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(style_description)
-            print(f"\n风格描述已保存到: {args.output}")
-        else:
-            print("\n生成的风格描述:")
-            print("=" * 60)
-            print(style_description)
-            print("=" * 60)
+    # Save mode
+    if args.save:
+        if not args.style_description_file:
+            print("错误：使用 --save 时必须指定 --style-description-file")
+            sys.exit(1)
 
-        # Save to data/articles.json if --save flag is set
-        if args.save:
-            styles = load_styles()
+        if not os.path.exists(args.style_description_file):
+            print(f"错误：风格描述文件不存在: {args.style_description_file}")
+            sys.exit(1)
 
-            # Create article entries for reference
-            article_entries = [
-                {
-                    "content": article,
-                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for article in reference_articles
-            ]
+        with open(args.style_description_file, "r", encoding="utf-8") as f:
+            style_description = f.read()
 
-            new_style = {
-                "name": args.style_name,
-                "description": style_description,
-                "additional_instructions": "",
-                "articles": article_entries,
-            }
-
-            # Check if style with same name already exists
-            existing_idx = None
-            for i, style in enumerate(styles):
-                if style.get("name") == args.style_name:
-                    existing_idx = i
-                    break
-
-            if existing_idx is not None:
-                # Update existing style
-                styles[existing_idx] = new_style
-                print(f"\n已更新风格 '{args.style_name}' 到 data/articles.json")
-            else:
-                # Add new style
-                styles.append(new_style)
-                print(f"\n已保存风格 '{args.style_name}' 到 data/articles.json")
-
-            save_styles(styles)
-            print(
-                f'现在可以使用 article-rewriter --style-name "{args.style_name}" 来使用此风格'
-            )
-
-    except Exception as e:
-        print(f"错误: {str(e)}")
-        sys.exit(1)
+        save_style_with_articles(
+            style_name=args.style_name,
+            style_description=style_description,
+            reference_articles=reference_articles,
+        )
+        print(f'\n现在可以使用 article-rewriter --style-name "{args.style_name}" 来使用此风格')
+    else:
+        print("\n提示：使用 --generate-prompt 生成风格分析提示")
+        print("      获得风格描述后，使用 --save 保存到风格数据库")
 
 
 if __name__ == "__main__":
