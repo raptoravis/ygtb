@@ -87,11 +87,44 @@ User: "请分析以下两篇文章的风格并生成风格描述"
 
 [用户提供参考文章]
 
-Claude: 
+Claude:
 1. 阅读参考文章
 2. 按照分析框架进行系统性分析
 3. 输出结构化的风格描述
 4. 确认用户是否需要调整
+
+## Command Line Usage
+
+### Basic Usage (Output to Console)
+
+```bash
+python skills/style-generator/scripts/generate_style.py \
+    --articles article1.txt,article2.txt \
+    --style-name "我的风格" \
+    --provider antigravity
+```
+
+### Save to File
+
+```bash
+python skills/style-generator/scripts/generate_style.py \
+    --articles article1.txt,article2.txt \
+    --style-name "我的风格" \
+    --provider antigravity \
+    --output style_description.txt
+```
+
+### Save to data/articles.json for Article Rewriter
+
+```bash
+python skills/style-generator/scripts/generate_style.py \
+    --articles article1.txt,article2.txt \
+    --style-name "我的风格" \
+    --provider antigravity \
+    --save
+```
+
+The `--save` flag saves the generated style to `data/articles.json`, making it available for use by the `article-rewriter` skill.
 
 ## Important Notes
 

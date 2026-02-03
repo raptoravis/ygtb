@@ -8,6 +8,7 @@ and generate a comprehensive style description using LLM.
 import argparse
 import os
 import sys
+from datetime import datetime
 from typing import List, Optional
 
 from langchain.prompts import ChatPromptTemplate
@@ -19,7 +20,12 @@ project_root = os.path.dirname(
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from utils import get_langchain_llm
+# Also try adding current working directory to path
+cwd = os.getcwd()
+if cwd not in sys.path:
+    sys.path.insert(0, cwd)
+
+from utils import get_langchain_llm, load_styles, save_styles
 
 
 def generate_style_description(
@@ -119,6 +125,11 @@ def main():
         default=None,
         help="输出文件路径（可选，默认输出到控制台）",
     )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="保存风格到 data/articles.json，供 article-rewriter 使用",
+    )
 
     args = parser.parse_args()
 
@@ -157,6 +168,47 @@ def main():
             print("=" * 60)
             print(style_description)
             print("=" * 60)
+
+        # Save to data/articles.json if --save flag is set
+        if args.save:
+            styles = load_styles()
+
+            # Create article entries for reference
+            article_entries = [
+                {
+                    "content": article,
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                }
+                for article in reference_articles
+            ]
+
+            new_style = {
+                "name": args.style_name,
+                "description": style_description,
+                "additional_instructions": "",
+                "articles": article_entries,
+            }
+
+            # Check if style with same name already exists
+            existing_idx = None
+            for i, style in enumerate(styles):
+                if style.get("name") == args.style_name:
+                    existing_idx = i
+                    break
+
+            if existing_idx is not None:
+                # Update existing style
+                styles[existing_idx] = new_style
+                print(f"\n已更新风格 '{args.style_name}' 到 data/articles.json")
+            else:
+                # Add new style
+                styles.append(new_style)
+                print(f"\n已保存风格 '{args.style_name}' 到 data/articles.json")
+
+            save_styles(styles)
+            print(
+                f'现在可以使用 article-rewriter --style-name "{args.style_name}" 来使用此风格'
+            )
 
     except Exception as e:
         print(f"错误: {str(e)}")

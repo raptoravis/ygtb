@@ -155,7 +155,9 @@ def get_langchain_llm(provider: str, model: str):
     if provider == "ollama":
         from langchain_ollama import OllamaLLM
 
-        return OllamaLLM(model=config["model"], base_url=config["base_url"], temperature=temperature)
+        return OllamaLLM(
+            model=config["model"], base_url=config["base_url"], temperature=temperature
+        )
     else:
         if not (config["api_key"] and config["base_url"]):
             raise ValueError(f"API credentials not found for provider: {provider}")
@@ -190,3 +192,100 @@ def pretty_print_result(result):
         else:
             parsed_result.append(line)
     return "\n".join(parsed_result)
+
+
+# Style storage functions
+ARTICLES_FILE = "data/articles.json"
+
+
+def load_styles():
+    """Load styles from data/articles.json"""
+    if os.path.exists(ARTICLES_FILE):
+        with open(ARTICLES_FILE, "r", encoding="utf-8") as f:
+            data = f.read()
+            if data.strip():
+                import json
+
+                loaded_data = json.loads(data)
+                return loaded_data.get("styles", [])
+    return []
+
+
+def save_styles(styles):
+    """Save styles to data/articles.json"""
+    os.makedirs(os.path.dirname(ARTICLES_FILE), exist_ok=True)
+    import json
+
+    with open(ARTICLES_FILE, "w", encoding="utf-8") as f:
+        json.dump({"styles": styles}, f, ensure_ascii=False, indent=2)
+
+
+def get_style_by_name(style_name: str):
+    """Get a style by name from data/articles.json
+
+    Args:
+        style_name: Name of the style to retrieve
+
+    Returns:
+        Style dictionary if found, None otherwise
+    """
+    styles = load_styles()
+    for style in styles:
+        if style.get("name") == style_name:
+            return style
+    return None
+
+
+def list_styles():
+    """List all available styles from data/articles.json
+
+    Returns:
+        List of style names
+    """
+    styles = load_styles()
+    return [style.get("name", "未命名风格") for style in styles]
+
+
+def add_article_to_style(style_name: str, content: str):
+    """Add a rewritten article to a style in data/articles.json
+
+    Args:
+        style_name: Name of the style to add the article to
+        content: The rewritten article content
+
+    Returns:
+        True if successful, False otherwise (e.g., style not found)
+
+    Raises:
+        Exception: If there's an error reading/writing the file
+    """
+    import json
+    from datetime import datetime
+
+    styles = load_styles()
+    style_found = False
+
+    for style in styles:
+        if style.get("name") == style_name:
+            style_found = True
+            # Ensure articles list exists
+            if "articles" not in style:
+                style["articles"] = []
+
+            # Create new article entry
+            article_entry = {
+                "content": content,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+
+            # Add to articles list
+            style["articles"].append(article_entry)
+            break
+
+    if not style_found:
+        print(f"警告：未找到名为 '{style_name}' 的风格")
+        return False
+
+    # Save back to file
+    save_styles(styles)
+    return True

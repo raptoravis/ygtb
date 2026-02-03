@@ -82,6 +82,60 @@ Claude:
 4. 应用额外指令（简洁化）
 5. 输出重写结果
 
+## Command Line Usage
+
+### Basic Usage with Style Description Text
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --style-description "风格描述内容..." \
+    --style-name "我的风格" \
+    --instructions "让文章更简洁" \
+    --provider antigravity
+```
+
+### Using Saved Style from data/articles.json
+
+First, list available styles:
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py --list-styles
+```
+
+Then use a saved style:
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --use-saved-style "我的风格" \
+    --provider antigravity \
+    --output rewritten.txt
+```
+
+### Saving Rewritten Article to Style Database
+
+You can save the rewritten article to the style's articles array for future reference:
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --use-saved-style "幽默短篇故事" \
+    --provider antigravity \
+    --save-article
+```
+
+This will add the rewritten article to `data/articles.json` under the specified style's `articles` array, building up a collection of examples for that style.
+
+### Using Style Description File
+
+```bash
+python skills/article-rewriter/scripts/rewrite_article.py \
+    --input target_article.txt \
+    --style-description style_description.txt \
+    --provider antigravity
+```
+
 ## Important Notes
 
 - Style adherence is the top priority

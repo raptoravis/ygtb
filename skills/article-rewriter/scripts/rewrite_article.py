@@ -19,7 +19,17 @@ project_root = os.path.dirname(
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from utils import get_langchain_llm
+# Also try adding current working directory to path
+cwd = os.getcwd()
+if cwd not in sys.path:
+    sys.path.insert(0, cwd)
+
+from utils import (
+    get_langchain_llm,
+    get_style_by_name,
+    list_styles,
+    add_article_to_style,
+)
 
 
 def rewrite_article(
@@ -96,14 +106,20 @@ def main():
     parser.add_argument(
         "--input",
         type=str,
-        required=True,
-        help="输入文章文件路径",
+        default=None,
+        help="输入文章文件路径（使用 --list-styles 时可选）",
     )
     parser.add_argument(
         "--style-description",
         type=str,
-        required=True,
-        help="风格描述文件路径或直接使用文本",
+        default=None,
+        help="风格描述文件路径或直接使用文本（与 --use-saved-style 互斥）",
+    )
+    parser.add_argument(
+        "--use-saved-style",
+        type=str,
+        default=None,
+        help="从 data/articles.json 中读取指定名称的风格（与 --style-description 互斥）",
     )
     parser.add_argument(
         "--style-name",
@@ -135,8 +151,48 @@ def main():
         default=None,
         help="输出文件路径（可选，默认输出到控制台）",
     )
+    parser.add_argument(
+        "--list-styles",
+        action="store_true",
+        help="列出 data/articles.json 中所有可用的风格",
+    )
+    parser.add_argument(
+        "--save-article",
+        action="store_true",
+        help="将重写后的文章保存到 data/articles.json 对应风格的 articles 数组中",
+    )
 
     args = parser.parse_args()
+
+    # List styles and exit
+    if args.list_styles:
+        styles = list_styles()
+        print("可用的风格:")
+        for style in styles:
+            print(f"  - {style}")
+        sys.exit(0)
+
+    # Validate required arguments
+    if not args.input:
+        print("错误：必须指定 --input")
+        sys.exit(1)
+
+    # List styles and exit
+    if args.list_styles:
+        styles = list_styles()
+        print("可用的风格:")
+        for style in styles:
+            print(f"  - {style}")
+        sys.exit(0)
+
+    # Validate style input options
+    if args.style_description and args.use_saved_style:
+        print("错误：不能同时使用 --style-description 和 --use-saved-style")
+        sys.exit(1)
+
+    if not args.style_description and not args.use_saved_style:
+        print("错误：必须指定 --style-description 或 --use-saved-style")
+        sys.exit(1)
 
     # Read input article
     if not os.path.exists(args.input):
@@ -147,20 +203,46 @@ def main():
         article_text = f.read()
 
     # Read style description
-    if os.path.exists(args.style_description):
-        with open(args.style_description, "r", encoding="utf-8") as f:
-            style_description = f.read()
+    style_description = None
+    final_style_name = args.style_name
+
+    if args.use_saved_style:
+        style = get_style_by_name(args.use_saved_style)
+        if not style:
+            print(f"错误：未找到名为 '{args.use_saved_style}' 的风格")
+            print(f"使用 --list-styles 查看可用的风格")
+            sys.exit(1)
+
+        style_description = style.get("description", "")
+        if not final_style_name:
+            final_style_name = style.get("name", args.use_saved_style)
+
+        # Merge additional instructions from saved style
+        saved_instructions = style.get("additional_instructions", "")
+        if saved_instructions:
+            if args.instructions:
+                combined_instructions = f"{saved_instructions}\n\n{args.instructions}"
+            else:
+                combined_instructions = saved_instructions
+            args.instructions = combined_instructions
+
+        print(f"使用已保存风格: {args.use_saved_style}")
     else:
-        # Use the argument directly as style description text
-        style_description = args.style_description
+        # Read style description from file or text
+        if os.path.exists(args.style_description):
+            with open(args.style_description, "r", encoding="utf-8") as f:
+                style_description = f.read()
+        else:
+            # Use the argument directly as style description text
+            style_description = args.style_description
 
     print(f"正在重写文章...")
     print(f"输入长度: {len(article_text)} 字符")
     print(f"使用提供商: {args.provider}")
     if args.model:
         print(f"使用模型: {args.model}")
-    if args.style_name:
-        print(f"风格名称: {args.style_name}")
+    if final_style_name:
+        print(f"风格名称: {final_style_name}")
     if args.instructions:
         print(f"额外指令: {args.instructions}")
 
@@ -168,17 +250,33 @@ def main():
         result = rewrite_article(
             article_text=article_text,
             style_description=style_description,
-            style_name=args.style_name,
+            style_name=final_style_name,
             additional_instructions=args.instructions,
             provider=args.provider,
             model=args.model,
         )
 
+        # Save to file if output specified
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(result)
             print(f"\n重写完成，已保存到: {args.output}")
-        else:
+
+        # Save to style's articles array if requested
+        if args.save_article:
+            if not final_style_name:
+                print(
+                    "\n警告：无法保存文章到风格。请使用 --use-saved-style 指定风格名称。"
+                )
+            else:
+                saved = add_article_to_style(final_style_name, result)
+                if saved:
+                    print(
+                        f"\n文章已保存到风格 '{final_style_name}' 的 articles 数组中。"
+                    )
+
+        # Print result if no output file specified
+        if not args.output:
             print("\n重写结果:")
             print("=" * 60)
             print(result)
