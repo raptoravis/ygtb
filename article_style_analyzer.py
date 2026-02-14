@@ -894,8 +894,9 @@ def main():
     glog_info(colored(f"使用 LLM 提供商: {args.provider}", "cyan"))
     if args.model:
         glog_info(colored(f"使用 LLM 模型: {args.model}", "cyan"))
+
     print("服务器正在启动...")
-    print(f"访问 http://localhost:{port}/ 使用文章风格分析工具")
+    print(f"访问 http://localhost:{args.port}/ 使用文章风格分析工具")
 
     try:
         server.start()
