@@ -723,6 +723,9 @@ def make_document(doc: Document, provider, model):
                 # 保存历史记录
                 add_history_entry(target_article, core_idea, "核心思想提取", additional_instructions)
                 update_history_select()
+                glog_info(
+                    colored(f"核心思想提取完成: 原文长度={len(target_article)}, 结果长度={len(core_idea)}", "green")
+                )
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>提取失败: {str(e)}</p>"
             finally:
@@ -846,6 +849,12 @@ def make_document(doc: Document, provider, model):
                 # 保存历史记录（使用合并后的额外指令）
                 add_history_entry(target_article, result, style_name, combined_instructions)
                 update_history_select()
+                glog_info(
+                    colored(
+                        f"文章重写完成: 风格={style_name}, 原文长度={len(target_article)}, 结果长度={len(result)}",
+                        "green",
+                    )
+                )
             except Exception as e:
                 result_div.text = f"<p style='color: red;'>重写出错: {str(e)}</p>"
             finally:
@@ -899,7 +908,13 @@ def make_document(doc: Document, provider, model):
                     style_tabs[active_tab_idx].style_data["description"] = result
                     style_tabs[active_tab_idx].desc_input.value = result
                     save_styles(styles_list)
-            generate_style_button.label = "生成风格"
+                    glog_info(
+                        colored(
+                            f"风格描述生成完成: 风格={style_name}, 参考文章数={len(articles)}, 描述长度={len(result)}",
+                            "green",
+                        )
+                    )
+            generate_style_button.label = "生成风格描述"
             generate_style_button.button_type = "success"
             generate_style_button.disabled = False
 
