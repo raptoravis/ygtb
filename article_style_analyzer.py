@@ -155,6 +155,39 @@ def analyze_article_with_style(
     return str(result.content)
 
 
+def extract_core_idea(article_text, additional_instructions, provider, model):
+    """提取文章的核心思想"""
+    llm = get_langchain_llm(provider=provider, model=model)
+
+    instructions_part = f"\n\n额外指令:\n{additional_instructions}" if additional_instructions else ""
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "你是一个专业的文章分析专家，擅长从文章中提取核心思想。"),
+            (
+                "human",
+                """请从以下文章中提取核心思想。
+
+{instructions_part}
+
+目标文章:
+{article_text}
+
+请用简洁清晰的语言概括文章的核心思想，保留文章的主要观点和结论。""",
+            ),
+        ]
+    )
+
+    chain = prompt | llm
+    result = chain.invoke(
+        {
+            "article_text": article_text,
+            "instructions_part": instructions_part,
+        }
+    )
+    return str(result.content)
+
+
 class StyleTab:
     def __init__(self, style_data, styles_list, update_ui_callback):
         self.style_data = style_data
@@ -482,6 +515,14 @@ def make_document(doc: Document, provider, model):
         sizing_mode="stretch_width",
     )
 
+    # 提取核心思想按钮
+    extract_core_idea_button = Button(
+        label="提取核心思想",
+        button_type="primary",
+        height=50,
+        sizing_mode="stretch_width",
+    )
+
     def copy_to_clipboard():
         """使用Python复制文本到剪贴板"""
         try:
@@ -646,6 +687,52 @@ def make_document(doc: Document, provider, model):
         doc.add_timeout_callback(reset_button, 2000)
 
     clear_instructions_button.on_click(clear_instructions)
+
+    # 提取核心思想
+    def extract_core_idea_handler():
+        extract_core_idea_button.label = "提取中..."
+        extract_core_idea_button.button_type = "default"
+        extract_core_idea_button.disabled = True
+        result_div.text = "<p style='color: blue;'>正在提取核心思想，请稍候...</p>"
+
+        def async_extraction():
+            try:
+                target_article = target_article_input.value.strip()
+                if not target_article:
+                    result_div.text = "<p style='color: red;'>请输入需要提取核心思想的文章</p>"
+                    return
+
+                # 获取额外指令
+                additional_instructions = additional_instructions_input.value.strip()
+
+                core_idea = extract_core_idea(
+                    target_article,
+                    additional_instructions,
+                    provider,
+                    model,
+                )
+                result_div.text = f"""
+                <h3>核心思想:</h3>
+                <div style="border: 1px solid #2196F3; padding: 15px; margin: 10px 0; background-color: #f9f9f9; box-sizing: border-box;">
+                    <div style="white-space: pre-wrap; overflow-wrap: break-word;">{html.escape(core_idea)}</div>
+                </div>
+                """
+                # 启用复制按钮
+                copy_button.disabled = False
+
+                # 保存历史记录
+                add_history_entry(target_article, core_idea, "核心思想提取", additional_instructions)
+                update_history_select()
+            except Exception as e:
+                result_div.text = f"<p style='color: red;'>提取失败: {str(e)}</p>"
+            finally:
+                extract_core_idea_button.label = "提取核心思想"
+                extract_core_idea_button.button_type = "primary"
+                extract_core_idea_button.disabled = False
+
+        doc.add_next_tick_callback(async_extraction)
+
+    extract_core_idea_button.on_click(extract_core_idea_handler)
 
     # 当下拉列表选择变化时启用/禁用恢复按钮
     def on_history_select_change(attr, old, new):
@@ -851,7 +938,7 @@ def make_document(doc: Document, provider, model):
         Div(text="<h2>风格转换</h2>", sizing_mode="stretch_width"),
         style_select_div,
         target_article_input,
-        row(analyze_button, clear_instructions_button),
+        row(analyze_button, clear_instructions_button, extract_core_idea_button),
         additional_instructions_input,
         row(copy_button),
         result_div,
