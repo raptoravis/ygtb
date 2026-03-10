@@ -71,9 +71,7 @@ def create_drive(use_edge_web_driver: bool):
 
     if use_edge_web_driver:
         # "user-data-dir=C:\\Users\\rapto\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default"
-        user_data_dir = os.path.join(
-            home_dir, "AppData\\Local\\Microsoft\\Edge\\User Data\\Default"
-        )
+        user_data_dir = os.path.join(home_dir, "AppData\\Local\\Microsoft\\Edge\\User Data\\Default")
 
         # use chromes' user data
         # user_data_dir = os.path.join(
@@ -81,9 +79,7 @@ def create_drive(use_edge_web_driver: bool):
         # )
     else:
         # "user-data-dir=C:\\Users\\rapto\\AppData\\Local\\Google\\Chrome\\User Data"
-        user_data_dir = os.path.join(
-            home_dir, "AppData\\Local\\Google\\Chrome\\User Data"
-        )
+        user_data_dir = os.path.join(home_dir, "AppData\\Local\\Google\\Chrome\\User Data")
     # user_data_dir = os.path.join(home_dir, "AppData\\Local\\Google\\Chrome\\User Data")
 
     data_dir_arg = f"user-data-dir={user_data_dir}"
@@ -197,9 +193,7 @@ def get_articles_data_wp(html, flter):
         return data
 
     ul = uls[0]
-    articles = ul.find_all(
-        "li", class_="album__list-item js_album_item js_wx_tap_highlight wx_tap_cell"
-    )
+    articles = ul.find_all("li", class_="album__list-item js_album_item js_wx_tap_highlight wx_tap_cell")
     for article in articles:
         item = {}
 
@@ -234,9 +228,7 @@ def get_articles_data_tt(html, flter, is_article: bool):
         soup = BeautifulSoup(html, "html.parser")
         # print(soup.title.text)
 
-        cls = (
-            "profile-article-card-wrapper" if is_article else "profile-wtt-card-wrapper"
-        )
+        cls = "profile-article-card-wrapper" if is_article else "profile-wtt-card-wrapper"
 
         articles = soup.find_all("div", class_=cls)
         for article in articles:
@@ -408,9 +400,7 @@ def get_all_update_items(
             #     EC.element_to_be_clickable(By.XPATH, f"//div[@class='{cls}']")
             # )
 
-            WebDriverWait(driver, 2).until(
-                EC.presence_of_element_located((By.XPATH, f"//div[@class='{cls}']"))
-            )
+            WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.XPATH, f"//div[@class='{cls}']")))
 
             xp = f"//div[@class='{cls}']/div[@class='js_negative_order order_opr_con']/span['album-sort__word']"
             # xp = '//*[@id="js_content_overlay"]/div[1]/div/div[5]/div[1]/div[1]/span'
@@ -1249,6 +1239,16 @@ def generate_txts(
                 r"",
                 txt,
             )
+            txt = re.sub(
+                r"立志花15年讲完.*现在已经坚持了6年",
+                r"",
+                txt,
+            )
+            txt = re.sub(
+                r"PS：很多朋友问我有没有书出版.*感兴趣的朋友可以通过下面链接购入一读，绝对不会让你失望.*",
+                r"",
+                txt,
+            )
 
             if len(txt) > 0:
                 valid_texts = re.search(r"\S", txt)
@@ -1335,9 +1335,7 @@ def download_link(
     txt = ""
     meta = ""
     try:
-        WebDriverWait(driver, 2).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
+        WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         m = driver.find_element(By.TAG_NAME, value="body")
         # meta = m.text
         meta = ""
@@ -1537,6 +1535,9 @@ def scrape_item(
     link = item["link"]
     name = item["name"]
     flter = item["filter"]
+    origin = "tt"
+    sort_reversed = False
+    include_title = False
     if link:
         # origin = item.get("origin", "tt")
         origin = "tt"
@@ -1731,12 +1732,8 @@ def main():
     parser.add_argument("-x", "--index", help="index", type=int, default=None)
     parser.add_argument("-m", "--checks", help="max checks", type=int, default=None)
     parser.add_argument("-a", "--max", help="max items", type=int, default=None)
-    parser.add_argument(
-        "-n", "--nocache", help="refresh all articles", action="store_true"
-    )
-    parser.add_argument(
-        "-f", "--force", help="force to check all the articles", action="store_true"
-    )
+    parser.add_argument("-n", "--nocache", help="refresh all articles", action="store_true")
+    parser.add_argument("-f", "--force", help="force to check all the articles", action="store_true")
     parser.add_argument(
         "--all",
         help="include all items, otherwise ignore those wp",
@@ -1938,9 +1935,7 @@ def handle_item(
     pass
 
 
-def generate_item(
-    args, max_articles_default, max_checks, force, idx, item, group_idx, group_txts
-):
+def generate_item(args, max_articles_default, max_checks, force, idx, item, group_idx, group_txts):
     name = item.get("name", None)
     max_articles = item.get("max", max_articles_default)
     is_article = item.get("is_article", True)
