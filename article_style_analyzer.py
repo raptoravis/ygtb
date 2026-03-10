@@ -488,12 +488,33 @@ def make_document(doc: Document, provider, model):
 
     analyze_button = Button(label="重写", button_type="primary", height=50, sizing_mode="stretch_width")
 
+    # 创建标签行，包含"额外指令（可选）"和"限制字数"及输入框
+    instructions_label_div = Div(
+        text="额外指令（可选）",
+        sizing_mode="stretch_width",
+        styles={"font-weight": "bold", "margin-bottom": "5px"},
+    )
+
     additional_instructions_input = TextAreaInput(
-        title="额外指令（可选）",
+        title="",
         placeholder="输入额外的指令，例如：让文章更简洁、增加幽默感、使用更正式的语气等...",
         value="",
         rows=4,
         sizing_mode="stretch_width",
+    )
+
+    # 字数限制输入框
+    word_limit_label = Div(
+        text="限制字数",
+        sizing_mode="stretch_width",
+        styles={"font-weight": "bold", "margin-bottom": "5px"},
+    )
+
+    word_limit_input = TextInput(
+        value="0",
+        title="",
+        placeholder="输入字数限制，0表示不限制",
+        width=70,
     )
 
     result_div = Div(text="", sizing_mode="stretch_width")
@@ -637,6 +658,19 @@ def make_document(doc: Document, provider, model):
                 additional_instructions = entry.get("additional_instructions", "")
                 additional_instructions_input.value = additional_instructions
 
+                # 解析并恢复字数限制
+                import re
+
+                word_limit = "0"
+                # 查找 "限制字数在X字以内" 模式
+                match = re.search(r"限制字数在(\d+)字以内", additional_instructions)
+                if match:
+                    word_limit = match.group(1)
+                    # 从额外指令中移除字数限制部分，避免重复
+                    additional_instructions = re.sub(r"\n\n限制字数在\d+字以内", "", additional_instructions)
+                    additional_instructions_input.value = additional_instructions
+                word_limit_input.value = word_limit
+
                 # 恢复结果到显示区域
                 style_name = entry.get("style_name", "未命名风格")
                 result_div.text = f"""
@@ -760,6 +794,19 @@ def make_document(doc: Document, provider, model):
             additional_instructions = last_entry.get("additional_instructions", "")
             additional_instructions_input.value = additional_instructions
 
+            # 解析并恢复字数限制
+            import re
+
+            word_limit = "0"
+            # 查找 "限制字数在X字以内" 模式
+            match = re.search(r"限制字数在(\d+)字以内", additional_instructions)
+            if match:
+                word_limit = match.group(1)
+                # 从额外指令中移除字数限制部分，避免重复
+                additional_instructions = re.sub(r"\n\n限制字数在\d+字以内", "", additional_instructions)
+                additional_instructions_input.value = additional_instructions
+            word_limit_input.value = word_limit
+
             # 恢复结果到显示区域
             style_name = last_entry.get("style_name", "未命名风格")
             result_div.text = f"""
@@ -817,17 +864,30 @@ def make_document(doc: Document, provider, model):
 
                 style_name = active_style.get("name", "未命名风格")
 
-                # 合并额外指令：风格的额外指令 + 全局额外指令
+                # 合并额外指令：风格的额外指令 + 全局额外指令 + 字数限制
                 style_instructions = active_style.get("additional_instructions", "").strip()
                 global_instructions = additional_instructions_input.value.strip()
 
-                # 风格指令在前，全局指令在后
+                # 检查字数限制
+                word_limit = word_limit_input.value.strip()
+                word_limit_instruction = ""
+                if word_limit and word_limit != "0":
+                    try:
+                        limit = int(word_limit)
+                        if limit > 0:
+                            word_limit_instruction = f"\n\n限制字数在{limit}字以内"
+                    except ValueError:
+                        pass  # 如果输入不是数字，忽略
+
+                # 风格指令在前，全局指令在后，字数限制最后
                 if style_instructions and global_instructions:
-                    combined_instructions = f"{style_instructions}\n\n{global_instructions}"
+                    combined_instructions = f"{style_instructions}\n\n{global_instructions}{word_limit_instruction}"
                 elif style_instructions:
-                    combined_instructions = style_instructions
+                    combined_instructions = f"{style_instructions}{word_limit_instruction}"
+                elif global_instructions:
+                    combined_instructions = f"{global_instructions}{word_limit_instruction}"
                 else:
-                    combined_instructions = global_instructions
+                    combined_instructions = word_limit_instruction
 
                 result = analyze_article_with_style(
                     target_article,
@@ -954,6 +1014,12 @@ def make_document(doc: Document, provider, model):
         style_select_div,
         target_article_input,
         row(analyze_button, clear_instructions_button, extract_core_idea_button),
+        row(
+            instructions_label_div,
+            row(word_limit_label, word_limit_input, styles={"margin-left": "auto"}),
+            sizing_mode="stretch_width",
+            styles={"display": "flex", "width": "100%"},
+        ),
         additional_instructions_input,
         row(copy_button),
         result_div,

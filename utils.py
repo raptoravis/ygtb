@@ -4,7 +4,7 @@ import os
 
 from dotenv import find_dotenv, load_dotenv
 
-HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".bbt")
+HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".nbt")
 credentials_env_path = os.path.join(HOME_PATH, "credentials.env")
 load_dotenv(credentials_env_path, verbose=True)
 
@@ -75,7 +75,7 @@ def get_llm_params(provider: str, model: str) -> dict:
         },
         "customai": {
             "provider": "openai",
-            "model": "kuaishou/kat-coder-pro-v1-free",
+            "model": "GLM-4.7-Flash",
             "api_key": CUSTOMAI_API_KEY,
             "base_url": CUSTOMAI_BASE_URL,
             "error_msg": "OpenAI API credentials not found. Please set CUSTOMAI_API_KEY/CUSTOMAI_BASE_URL env var.",
