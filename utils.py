@@ -20,6 +20,9 @@ OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 CUSTOMAI_API_KEY = os.environ.get("CUSTOMAI_API_KEY")
 CUSTOMAI_BASE_URL = os.environ.get("CUSTOMAI_BASE_URL")
 
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+
 
 def glog_info(msg: str):
     print(msg)
@@ -79,6 +82,13 @@ def get_llm_params(provider: str, model: str) -> dict:
             "api_key": CUSTOMAI_API_KEY,
             "base_url": CUSTOMAI_BASE_URL,
             "error_msg": "OpenAI API credentials not found. Please set CUSTOMAI_API_KEY/CUSTOMAI_BASE_URL env var.",
+        },
+        "openrouter": {
+            "provider": "openai",
+            "model": "stepfun/step-3.5-flash:free",
+            "api_key": OPENROUTER_API_KEY,
+            "base_url": OPENROUTER_BASE_URL,
+            "error_msg": "OpenRouter API credentials not found. Please set OPENROUTER_API_KEY/OPENROUTER_BASE_URL",
         },
     }
 
