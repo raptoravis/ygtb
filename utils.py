@@ -8,21 +8,6 @@ HOME_PATH: str = os.path.join(os.path.expanduser("~"), ".nbt")
 credentials_env_path = os.path.join(HOME_PATH, "credentials.env")
 load_dotenv(credentials_env_path, verbose=True)
 
-DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
-DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL")
-
-ANTIGRAVITY_API_KEY = os.environ.get("ANTIGRAVITY_API_KEY")
-ANTIGRAVITY_BASE_URL = os.environ.get("ANTIGRAVITY_BASE_URL")
-
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-
-CUSTOMAI_API_KEY = os.environ.get("CUSTOMAI_API_KEY")
-CUSTOMAI_BASE_URL = os.environ.get("CUSTOMAI_BASE_URL")
-
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-
 
 def glog_info(msg: str):
     print(msg)
@@ -55,50 +40,24 @@ def get_llm_params(provider: str, model: str) -> dict:
             "model": None,  # Will use the model parameter
             "base_url": "http://localhost:11434",
         },
-        "antigravity": {
-            "provider": "openai",
-            "model": "gemini-3-flash",
-            "api_key": ANTIGRAVITY_API_KEY,
-            "base_url": ANTIGRAVITY_BASE_URL,
-            "error_msg": "Antigravity API credentials not found. Please set ANTIGRAVITY_API_KEY/ANTIGRAVITY_BASE_URL",
-        },
-        "dashscope": {
-            "provider": "openai",
-            "model": "qwen3-coder-plus",
-            "api_key": DASHSCOPE_API_KEY,
-            "base_url": DASHSCOPE_BASE_URL,
-            "error_msg": "Dashscope API credentials not found. Please set DASHSCOPE_API_KEY env var.",
-        },
-        "openai": {
-            "provider": "openai",
-            "model": "gpt-4",
-            "api_key": OPENAI_API_KEY,
-            "base_url": OPENAI_BASE_URL,
-            "error_msg": "OpenAI API credentials not found. Please set OPENAI_API_KEY env var.",
-        },
-        "customai": {
-            "provider": "openai",
-            "model": "GLM-4.7-Flash",
-            "api_key": CUSTOMAI_API_KEY,
-            "base_url": CUSTOMAI_BASE_URL,
-            "error_msg": "OpenAI API credentials not found. Please set CUSTOMAI_API_KEY/CUSTOMAI_BASE_URL env var.",
-        },
-        "openrouter": {
-            "provider": "openai",
-            "model": "stepfun/step-3.5-flash:free",
-            "api_key": OPENROUTER_API_KEY,
-            "base_url": OPENROUTER_BASE_URL,
-            "error_msg": "OpenRouter API credentials not found. Please set OPENROUTER_API_KEY/OPENROUTER_BASE_URL",
-        },
     }
 
-    if provider not in provider_configs:
-        raise ValueError(f"Unknown provider: {provider}")
+    api_key_name = f"{provider.upper()}_API_KEY"
+    base_url_name = f"{provider.upper()}_BASE_URL"
+    model_name = f"{provider.upper()}_MODEL"
 
-    config = provider_configs[provider]
+    api_key = os.environ.get(api_key_name)
+    base_url = os.environ.get(base_url_name)
+    model = model or os.environ.get(model_name)
 
-    if provider != "ollama" and not (config["api_key"] and config["base_url"]):
-        raise ValueError(config["error_msg"])
+    config = {
+        "provider": "openai",
+        "model": model,
+        "api_key": api_key,
+        "base_url": base_url,
+        "error_msg": f"API credentials not found. Please set : {api_key_name}, {base_url_name}",
+    }
+    provider_configs[provider] = config
 
     model = model or config["model"]
     glog_info(f"{provider} {model}")
@@ -130,37 +89,7 @@ def get_langchain_llm(provider: str, model: str):
     provider = provider.lower()
     temperature = 0.3
 
-    provider_configs = {
-        "ollama": {
-            "model": model or "llama3.2",
-            "base_url": "http://localhost:11434",
-        },
-        "antigravity": {
-            "model": model or "gemini-3-flash",
-            "api_key": ANTIGRAVITY_API_KEY,
-            "base_url": ANTIGRAVITY_BASE_URL,
-        },
-        "dashscope": {
-            "model": model or "qwen3-coder-plus",
-            "api_key": DASHSCOPE_API_KEY,
-            "base_url": DASHSCOPE_BASE_URL,
-        },
-        "openai": {
-            "model": model or "gpt-4",
-            "api_key": OPENAI_API_KEY,
-            "base_url": OPENAI_BASE_URL,
-        },
-        "customai": {
-            "model": model or "kuaishou/kat-coder-pro-v1-free",
-            "api_key": CUSTOMAI_API_KEY,
-            "base_url": CUSTOMAI_BASE_URL,
-        },
-    }
-
-    if provider not in provider_configs:
-        raise ValueError(f"Unknown provider: {provider}")
-
-    config = provider_configs[provider]
+    config = get_llm_params(provider=provider, model=model)
 
     if provider == "ollama":
         from langchain_ollama import OllamaLLM
