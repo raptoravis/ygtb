@@ -1240,6 +1240,16 @@ def generate_txts(
                 txt,
             )
             txt = re.sub(
+                r"历史不断重复.*一起变的更厉害",
+                r"",
+                txt,
+            )
+            txt = re.sub(
+                r"▼点击下方名片关注，.*可得私密干货。",
+                r"",
+                txt,
+            )
+            txt = re.sub(
                 r"立志花15年讲完.*现在已经坚持了6年",
                 r"",
                 txt,
