@@ -218,18 +218,18 @@ os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 ### ./
 | ID | Type | Title | Date |
 |----|------|-------|------|
-| c39e194e-fec4-46db-b1ff-afd12bfbc7cd | 🔴 bugfix | Python LSP: TextIO error persists + new type errors | 2026-03-30 |
-| fb5b693c-3a76-48c7-a821-1edc4aa58cbd | 🔵 discovery | Feishu-export: wiki token resolution with pagination | 2026-03-30 |
-| 4aee3d89-1e51-4929-8be8-090001d1802b | 🔴 bugfix | Python LSP: TextIO error persists + new type errors | 2026-03-30 |
-| d05e9a0f-55ef-4c0d-b4fc-8bee1fc4cf0e | 🔵 discovery | Feishu-export: lark_api wrapper with JSON handling | 2026-03-30 |
-| 3da837b1-2fd5-4525-9b87-ff8d192fd47c | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
-| 466bf600-1d37-4f61-a6b6-55c68f2fbafd | 🔵 discovery | Feishu-export: sheets loop and bitables function start | 2026-03-30 |
-| 43a877e2-ec3b-4c82-bb57-3a0513fcbc4b | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
-| 9cdc5868-0035-4be3-b624-37fcbf0871d0 | 🔵 discovery | Feishu-export: sheets uses doc-type filter and deduplication | 2026-03-30 |
-| 98aa835f-4558-4b6d-8d2b-3b1eea348b77 | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
-| a0a89c28-c4bc-4b96-ad69-8537603c9644 | 🔵 discovery | Feishu-export: doc routing by entity type | 2026-03-30 |
+| ebc55fdf-04b2-43d4-8649-649e512c804d | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| 3bc087f3-7e87-4bdc-b8a4-a3e99f5e01d6 | 🔴 bugfix | Feishu-export: wiki found 18 but all skipped due to get_node errors | 2026-03-30 |
+| b63bee6a-e5e1-4395-818d-8373f974b8cd | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| 5de5f825-d0ab-4fb7-b091-afd719ef2a89 | 🔴 bugfix | Feishu-export: node_raw assignment inside wrong if-block | 2026-03-30 |
+| 8bcfdc5e-16de-4871-8d2a-377fd5ddaf29 | 🔴 bugfix | Feishu-export: UnboundLocalError - node_raw not assigned | 2026-03-30 |
+| 6d5b272b-a37b-4d11-9682-997bf2644690 | 🔴 bugfix | Python LSP: TextIO error + new unbound variable warning | 2026-03-30 |
+| e435e454-9912-4d5e-8f6d-c43ae5073e40 | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| a82908fd-dc2f-4649-993a-c8ad82d7b250 | 🔵 discovery | Feishu-export: wiki node resolution and fallback logic | 2026-03-30 |
+| 0731ee35-e754-40d3-9c86-31c4223a353f | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| 6d277ef5-cf20-4b46-8e30-233ca92af19d | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
 
-**Key concepts:** type-stub-mismatch, lsp-false-positive, type-error, pagination, wiki-token-resolution, obj_type-routing, error-handling, runtime-vs-compiletime, api-wrapper, silent-failure
+**Key concepts:** type-stub-mismatch, lsp-false-positive, runtime-vs-compiletime, export-failure, encoding-error, wiki-token-resolution, empty-results, code-structure-bug, unbound-variable, conditional-assignment
 
 💡 *Use `mem-find` to search full details. Use `mem-create` to save important decisions.*
 <!-- /open-mem-context -->

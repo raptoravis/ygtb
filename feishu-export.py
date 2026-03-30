@@ -62,7 +62,6 @@ def search_api(query="", page_token="", page_size=20):
         except Exception as e:
             print(f"  ERROR parsing: {e}", flush=True)
             return None
-    print("  ERROR: No raw response", flush=True)
     return None
 
 
@@ -254,53 +253,58 @@ def export_wiki():
     os.makedirs(wiki_dir, exist_ok=True)
 
     wiki_count = 0
+    page_token = ""
+    page = 1
 
-    raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "20")
-    if not raw:
-        print("  ERROR: Search returned empty", flush=True)
-        return
-    data = json.loads(raw.decode("utf-8"))
-    if not data.get("ok"):
-        print(f"  ERROR: Search not ok: {data}", flush=True)
-        return
-    results = data.get("data", {}).get("results", [])
-    if not results:
-        print("  No results found", flush=True)
-        return
+    while True:
+        data = search_api(page_token=page_token, page_size=20)
+        if not data or data.get("code") != 0:
+            print("  ERROR: Search failed", flush=True)
+            break
 
-    print(f"  Found {len(results)} results", flush=True)
+        results = data.get("data", {}).get("res_units", [])
+        if not results:
+            break
 
-    for item in results:
-        if item.get("entity_type") == "WIKI":
-            wiki_count += 1
-            token = item.get("result_meta", {}).get("token", "")
-            title = sanitize(item.get("title_highlighted", ""))
-            if not title:
-                title = token
+        print(f"  Page {page}: {len(results)} results", flush=True)
 
-            node_raw = lark_cli("wiki", "spaces", "get_node", "--params", '{"token":"' + token + '"}')
-            if node_raw:
-                try:
-                    nd = json.loads(node_raw.decode("utf-8"))
-                    if nd.get("code") == 0 and nd.get("data", {}).get("node"):
-                        node = nd["data"]["node"]
-                        obj_type = node.get("obj_type", "")
-                        real_token = node.get("obj_token", "")
-                        node_title = sanitize(node.get("title", "")) or title
+        for item in results:
+            if item.get("entity_type") == "WIKI":
+                wiki_count += 1
+                token = item.get("result_meta", {}).get("token", "")
+                title = sanitize(item.get("title_highlighted", ""))
+                if not title:
+                    title = token
 
-                        if obj_type == "sheet":
-                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.xlsx"), "sheet")
-                        elif obj_type == "bitable":
-                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.json"), "bitable")
-                        elif obj_type in ("docx", "doc"):
-                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
-                        else:
-                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
-                        continue
-                except Exception as e:
-                    print(f"    ERROR getting node: {e}", flush=True)
+                node_raw = lark_cli("wiki", "spaces", "get_node", "--params", '{"token":"' + token + '"}')
+                if node_raw:
+                    try:
+                        nd = json.loads(node_raw.decode("utf-8"))
+                        if nd.get("code") == 0 and nd.get("data", {}).get("node"):
+                            node = nd["data"]["node"]
+                            obj_type = node.get("obj_type", "")
+                            real_token = node.get("obj_token", "")
+                            node_title = sanitize(node.get("title", "")) or title
 
-            export_doc(token, os.path.join(wiki_dir, f"{title}.md"), "docx")
+                            if obj_type == "sheet":
+                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.xlsx"), "sheet")
+                            elif obj_type == "bitable":
+                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.json"), "bitable")
+                            elif obj_type in ("docx", "doc"):
+                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
+                            else:
+                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
+                            continue
+                    except Exception as e:
+                        print(f"    ERROR getting node: {e}", flush=True)
+
+                export_doc(token, os.path.join(wiki_dir, f"{title}.md"), "docx")
+
+        has_more = data.get("data", {}).get("has_more", False)
+        page_token = data.get("data", {}).get("page_token", "")
+        if not has_more or not page_token:
+            break
+        page += 1
 
     print(f"  Total wiki items found: {wiki_count}", flush=True)
 
