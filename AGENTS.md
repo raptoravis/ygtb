@@ -218,10 +218,18 @@ os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 ### ./
 | ID | Type | Title | Date |
 |----|------|-------|------|
-| 96d19a8e-007f-4aaa-b52d-fc6a148b0b8a | 🔵 discovery | Feishu-export: API helper with bare except on JSON parse | 2026-03-30 |
-| a7215ec3-fa52-446c-b8d6-3cdadcdd0a28 | 🔴 bugfix | Python LSP: TextIO reconfigure attribute error | 2026-03-30 |
+| c39e194e-fec4-46db-b1ff-afd12bfbc7cd | 🔴 bugfix | Python LSP: TextIO error persists + new type errors | 2026-03-30 |
+| fb5b693c-3a76-48c7-a821-1edc4aa58cbd | 🔵 discovery | Feishu-export: wiki token resolution with pagination | 2026-03-30 |
+| 4aee3d89-1e51-4929-8be8-090001d1802b | 🔴 bugfix | Python LSP: TextIO error persists + new type errors | 2026-03-30 |
+| d05e9a0f-55ef-4c0d-b4fc-8bee1fc4cf0e | 🔵 discovery | Feishu-export: lark_api wrapper with JSON handling | 2026-03-30 |
+| 3da837b1-2fd5-4525-9b87-ff8d192fd47c | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| 466bf600-1d37-4f61-a6b6-55c68f2fbafd | 🔵 discovery | Feishu-export: sheets loop and bitables function start | 2026-03-30 |
+| 43a877e2-ec3b-4c82-bb57-3a0513fcbc4b | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| 9cdc5868-0035-4be3-b624-37fcbf0871d0 | 🔵 discovery | Feishu-export: sheets uses doc-type filter and deduplication | 2026-03-30 |
+| 98aa835f-4558-4b6d-8d2b-3b1eea348b77 | 🔴 bugfix | Python LSP: TextIO reconfigure error persists | 2026-03-30 |
+| a0a89c28-c4bc-4b96-ad69-8537603c9644 | 🔵 discovery | Feishu-export: doc routing by entity type | 2026-03-30 |
 
-**Key concepts:** api-wrapper, silent-failure, filename-sanitization, type-stub-mismatch, runtime-vs-compiletime, lsp-false-positive
+**Key concepts:** type-stub-mismatch, lsp-false-positive, type-error, pagination, wiki-token-resolution, obj_type-routing, error-handling, runtime-vs-compiletime, api-wrapper, silent-failure
 
 💡 *Use `mem-find` to search full details. Use `mem-create` to save important decisions.*
 <!-- /open-mem-context -->

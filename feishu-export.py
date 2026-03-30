@@ -29,8 +29,8 @@ def lark_cli(*args):
 
 def lark_cli_powershell(*args):
     """Call lark-cli via PowerShell, return stdout bytes"""
-    cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", f"& lark-cli {' '.join(args)}"]
-    proc = subprocess.run(cmd, capture_output=True)
+    cmd = f"& lark-cli {' '.join(args)}"
+    proc = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-Command", cmd], capture_output=True)
     return proc.stdout
 
 
@@ -45,6 +45,24 @@ def lark_api(path, params=None):
             return json.loads(raw.decode("utf-8"))
         except Exception:
             return None
+    return None
+
+
+def search_api(query="", page_token="", page_size=20):
+    """Call search API via POST"""
+    body = {"page_size": page_size, "query": query, "doc_filter": {}, "wiki_filter": {}}
+    if page_token:
+        body["page_token"] = page_token
+    body_json = json.dumps(body, separators=(",", ":"))
+    raw = lark_cli("api", "POST", "search/v2/doc_wiki/search", "--data", body_json)
+    if raw:
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            return data
+        except Exception as e:
+            print(f"  ERROR parsing: {e}", flush=True)
+            return None
+    print("  ERROR: No raw response", flush=True)
     return None
 
 
@@ -235,57 +253,56 @@ def export_wiki():
     wiki_dir = os.path.join(EXPORT_ROOT, "wiki")
     os.makedirs(wiki_dir, exist_ok=True)
 
-    page = 1
-    while True:
-        raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "50", "--page", str(page))
-        if not raw:
-            break
-        data = json.loads(raw.decode("utf-8"))
-        if not data.get("ok") or not data.get("data", {}).get("results"):
-            break
+    wiki_count = 0
 
-        results = data["data"]["results"]
-        found_wiki = False
+    raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "20")
+    if not raw:
+        print("  ERROR: Search returned empty", flush=True)
+        return
+    data = json.loads(raw.decode("utf-8"))
+    if not data.get("ok"):
+        print(f"  ERROR: Search not ok: {data}", flush=True)
+        return
+    results = data.get("data", {}).get("results", [])
+    if not results:
+        print("  No results found", flush=True)
+        return
 
-        for item in results:
-            if item.get("entity_type") == "WIKI":
-                found_wiki = True
-                token = item.get("result_meta", {}).get("token", "")
-                title = sanitize(item.get("title_highlighted", ""))
-                if not title:
-                    title = token
+    print(f"  Found {len(results)} results", flush=True)
 
-                node_raw = lark_cli(
-                    "wiki", "spaces", "get_node", "--params", json.dumps({"token": token}, separators=(",", ":"))
-                )
-                if node_raw:
-                    try:
-                        nd = json.loads(node_raw.decode("utf-8"))
-                        if nd.get("code") == 0 and nd.get("data", {}).get("node"):
-                            node = nd["data"]["node"]
-                            obj_type = node.get("obj_type", "")
-                            real_token = node.get("obj_token", "")
-                            node_title = sanitize(node.get("title", "")) or title
+    for item in results:
+        if item.get("entity_type") == "WIKI":
+            wiki_count += 1
+            token = item.get("result_meta", {}).get("token", "")
+            title = sanitize(item.get("title_highlighted", ""))
+            if not title:
+                title = token
 
-                            if obj_type == "sheet":
-                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.xlsx"), "sheet")
-                            elif obj_type == "bitable":
-                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.json"), "bitable")
-                            elif obj_type in ("docx", "doc"):
-                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
-                            else:
-                                export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
-                            continue
-                    except Exception:
-                        pass
+            node_raw = lark_cli("wiki", "spaces", "get_node", "--params", '{"token":"' + token + '"}')
+            if node_raw:
+                try:
+                    nd = json.loads(node_raw.decode("utf-8"))
+                    if nd.get("code") == 0 and nd.get("data", {}).get("node"):
+                        node = nd["data"]["node"]
+                        obj_type = node.get("obj_type", "")
+                        real_token = node.get("obj_token", "")
+                        node_title = sanitize(node.get("title", "")) or title
 
-                export_doc(token, os.path.join(wiki_dir, f"{title}.md"), "docx")
+                        if obj_type == "sheet":
+                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.xlsx"), "sheet")
+                        elif obj_type == "bitable":
+                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.json"), "bitable")
+                        elif obj_type in ("docx", "doc"):
+                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
+                        else:
+                            export_doc(real_token, os.path.join(wiki_dir, f"{node_title}.md"), "docx")
+                        continue
+                except Exception as e:
+                    print(f"    ERROR getting node: {e}", flush=True)
 
-        if not found_wiki and page > 1:
-            break
-        if not results:
-            break
-        page += 1
+            export_doc(token, os.path.join(wiki_dir, f"{title}.md"), "docx")
+
+    print(f"  Total wiki items found: {wiki_count}", flush=True)
 
 
 def export_my_docs():
@@ -295,36 +312,44 @@ def export_my_docs():
     my_docs_dir = os.path.join(EXPORT_ROOT, "my_docs")
     os.makedirs(my_docs_dir, exist_ok=True)
 
+    page_token = ""
     page = 1
     while True:
-        raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "50", "--page", str(page))
+        if page_token:
+            raw = lark_cli_powershell(
+                "docs", "+search", "--format", "json", "--page-size", "20", "--page-token", page_token
+            )
+        else:
+            raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "20")
         if not raw:
             break
         data = json.loads(raw.decode("utf-8"))
-        if not data.get("ok") or not data.get("data", {}).get("results"):
+        if not data.get("ok"):
+            break
+        results = data.get("data", {}).get("results", [])
+        if not results:
             break
 
-        results = data["data"]["results"]
-        found_doc = False
+        print(f"  Page {page}: {len(results)} results", flush=True)
 
         for item in results:
             entity = item.get("entity_type", "")
             if entity in ("DOCX", "DOC"):
-                found_doc = True
                 token = item.get("result_meta", {}).get("token", "")
                 title = sanitize(item.get("title_highlighted", ""))
                 if not title:
                     title = token
                 export_doc(token, os.path.join(my_docs_dir, f"{title}.md"), "docx")
             elif entity == "SHEET":
-                found_doc = True
                 token = item.get("result_meta", {}).get("token", "")
                 title = sanitize(item.get("title_highlighted", ""))
                 if not title:
                     title = token
                 export_doc(token, os.path.join(my_docs_dir, f"{title}.xlsx"), "sheet")
 
-        if not found_doc and page > 1:
+        has_more = data.get("data", {}).get("has_more", False)
+        page_token = data.get("data", {}).get("page_token", "")
+        if not has_more or not page_token:
             break
         page += 1
 
@@ -338,20 +363,35 @@ def export_sheets():
 
     seen_tokens = set()
 
+    page_token = ""
     page = 1
     while True:
-        raw = lark_cli_powershell(
-            "docs", "+search", "--format", "json", "--page-size", "50", "--page", str(page), "--doc-type", "sheet"
-        )
+        if page_token:
+            raw = lark_cli_powershell(
+                "docs",
+                "+search",
+                "--format",
+                "json",
+                "--page-size",
+                "20",
+                "--page-token",
+                page_token,
+                "--doc-type",
+                "sheet",
+            )
+        else:
+            raw = lark_cli_powershell("docs", "+search", "--format", "json", "--page-size", "20", "--doc-type", "sheet")
         if not raw:
             break
         data = json.loads(raw.decode("utf-8"))
-        if not data.get("ok") or not data.get("data", {}).get("results"):
+        if not data.get("ok"):
             break
 
-        results = data["data"]["results"]
+        results = data.get("data", {}).get("results", [])
         if not results:
             break
+
+        print(f"  Page {page}: {len(results)} sheets", flush=True)
 
         for item in results:
             token = item.get("result_meta", {}).get("token", "")
@@ -362,6 +402,10 @@ def export_sheets():
                     title = token
                 export_doc(token, os.path.join(sheets_dir, f"{title}.xlsx"), "sheet")
 
+        has_more = data.get("data", {}).get("has_more", False)
+        page_token = data.get("data", {}).get("page_token", "")
+        if not has_more or not page_token:
+            break
         page += 1
 
 
@@ -412,8 +456,8 @@ print("  Feishu Document Export (All Types)", flush=True)
 print(f"  Target: {EXPORT_ROOT}", flush=True)
 print("=" * 50, flush=True)
 
-print("\n=== Cloud Drive ===", flush=True)
-process_folder("", "")
+# print("\n=== Cloud Drive ===", flush=True)
+# process_folder("", "")
 
 export_wiki()
 export_my_docs()
