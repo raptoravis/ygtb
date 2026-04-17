@@ -38,13 +38,7 @@ def main():
     
     target_dir = args.directory
     subdirs = list_subdirectories(target_dir)
-    
-    if subdirs:
-        print(f"在 '{target_dir}' 中找到以下子目录:")
-        for subdir in subdirs:
-            print(f"  - {subdir}")
-    else:
-        print(f"在 '{target_dir}' 中没有找到子目录。")
+    print(subdirs)
 
 
 if __name__ == "__main__":
